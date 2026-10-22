@@ -35,7 +35,7 @@ start_date      =
 end_date        = @T_END_DATE@
 intrabar        = @T_INTRABAR@
 tick_step       = 0.002
-liquidation     = 1
+liquidation     = @T_LIQUIDATION@
 save_every      = 500
 
 [REAL]

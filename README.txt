@@ -10,6 +10,7 @@ step by step and executes its orders on a simulated exchange that reproduces the
 real one: fees, slippage, isolated/cross margin, tiered maintenance margin, funding every
 8 hours and liquidation.
 
+Version 1.0.1 - changes in CHANGELOG.txt
 Italian version: README_IT.txt
 
 
@@ -60,7 +61,7 @@ HIGHLIGHTS
   intra-candle ticks run in 0.2 seconds.
 
 * Tested
-  12 CTest tests on fixed real market data (BTCUSDT 2023-2024).
+  13 CTest tests on fixed real market data (BTCUSDT 2023-2024).
 
 
 HOW IT WORKS
@@ -180,6 +181,10 @@ WRITING A STRATEGY
 
 Files the strategy writes in InitContext::strLogDir are archived with the cycle automatically.
 
+A strategy that saves its own state (for example next to its .ini) reloads it only when
+InitContext::bResume is true, that is when the engine resumes a saved simulation. When it is
+false the run starts from scratch and any state left by a previous run must be ignored.
+
 
 CONFIGURATION
 -------------
@@ -211,7 +216,7 @@ OUTPUT
 TESTS
 -----
 
-./comp_All.sh test runs 12 tests on fixed real data (file/Tests/Data: BTCUSDT 1h and funding,
+./comp_All.sh test runs 13 tests on fixed real data (file/Tests/Data: BTCUSDT 1h and funding,
 2023-2024):
 
     loader_not_strategy     the engine rejects a library that is not a strategy,
@@ -225,6 +230,8 @@ TESTS
     golden_high_first       extreme intra-candle path: high first
     golden_bitget           real exchange parameters: tiered maintenance margin,
                             low slippage, funding multiplier
+    no_liquidation_warning  with liquidation = 0 the engine warns when the equity goes below
+                            zero: the result is not realistic
     resume                  a run stopped mid-candle and resumed gives the same cycles as an
                             uninterrupted one
     benchmark               steps per second (measurement only)

@@ -36,6 +36,10 @@ CEngine::CEngine():
 	bStrategyStarted(false),
 	bArchiveOpenCycle(false),
 	bSaveNow(false),
+	bResumed(false),
+	bLiquidation(true),
+	bUnderwater(false),
+	nUnderwater(0),
 	nExitCode(0),
 	nStartStep(0),
 	dPeakEquity(0),
@@ -124,6 +128,7 @@ bool CEngine::Setup(const CSettings& settings)
 	dMinNotional      = settings.exchange.dMinNotional;
 	strStateFile      = settings.sim.strStateFile;
 	nSaveEvery        = settings.sim.nSaveEvery;
+	bLiquidation      = settings.sim.nLiquidation != 0;
 	bArchiveOpenCycle = settings.sim.nResume == 0;
 
 	pExchange = std::make_unique<CSimExchange>(rules, dInitialCapital);
@@ -175,7 +180,7 @@ bool CEngine::Setup(const CSettings& settings)
 	                  TimeUtils::Format(pFeed->LastTime()) + ", capital " + Num(pExchange->GetAccount().dEquity) +
 	                  ", first cycle b" + std::to_string(archive.CurrentCycle()));
 
-	InitContext initCtx{Mode::Simulated, settings.strSymbol, nFrom, settings.path.strLog, settings.path.strBackup,
+	InitContext initCtx{Mode::Simulated, bResumed, settings.strSymbol, nFrom, settings.path.strLog, settings.path.strBackup,
 	                    pExchange->GetAccount(), pExchange->GetPosition(), pExchange->GetRules(), logger};
 	if(!pStrategy->Init(initCtx))
 	{
@@ -227,6 +232,7 @@ bool CEngine::_Resume(const CSettings& settings)
 
 	pExchange->Restore(state.exchange);
 	archive.Restore(state.cycle);
+	bResumed     = true;
 	ctx.nStep    = state.nStep;
 	ctx.nTime    = state.exchange.nTime;
 	ctx.dPrice   = state.exchange.dPrice;
@@ -293,6 +299,15 @@ void CEngine::run()
 	_UpdateContext();
 	archive.OnStep(ctx.account, ctx.position);
 
+	if(!bLiquidation && !bUnderwater && ctx.position.bOpen && ctx.account.dEquity < 0)
+	{
+		bUnderwater = true;
+		++nUnderwater;
+		logger.Warning("Equity below zero (" + Num(ctx.account.dEquity) + " USDT) in cycle " + std::to_string(ctx.nCycle) +
+		               " with " CFG_SIM_LIQUIDATION " = 0: on a real account the position would already have been "
+		               "liquidated, the result of the simulation is not realistic");
+	}
+
 	const RunResult result = pStrategy->Run(ctx);
 
 	if(pendingClose.bPending)
@@ -350,6 +365,7 @@ void CEngine::_OnLiquidation()
 void CEngine::_ArchiveCycle()
 {
 	pendingClose.bPending = false;
+	bUnderwater = false;
 
 	std::string strError;
 	const std::string strSummary = archive.Close(ctx.nTime, pendingClose.dExitPrice, pendingClose.positionBefore,
@@ -432,6 +448,8 @@ void CEngine::_Finish(bool bError, const std::string& strReason)
 		", liquidations " + std::to_string(stats.nLiquidations) +
 		", orders " + std::to_string(stats.nOrders) + ", rejected " + std::to_string(stats.nRejected) +
 		", fees " + Num(stats.dFeesPaid) + " USDT, funding " + Num(stats.dFundingPaid) + " USDT" +
+		(nUnderwater > 0 ? ", cycles with equity below zero " + std::to_string(nUnderwater) +
+		                   " (" CFG_SIM_LIQUIDATION " = 0: result not realistic)" : std::string()) +
 		(pExchange->GetPosition().bOpen ? (bArchiveOpenCycle ? ", last cycle still open (archived)"
 		                                                     : ", cycle " + std::to_string(archive.CurrentCycle()) + " still open (kept in Log)")
 		                                : "") +

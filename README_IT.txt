@@ -10,6 +10,7 @@ dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le rego
 vero: commissioni, slippage, margine isolated/crossed, margine di mantenimento a scaglioni,
 funding ogni 8 ore e liquidazione.
 
+Versione 1.0.1 - modifiche in CHANGELOG.txt (in inglese)
 English version: README.txt
 
 
@@ -64,7 +65,7 @@ PUNTI DI FORZA
   dentro la candela girano in 0,2 secondi.
 
 * Testato
-  12 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024).
+  13 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024).
 
 
 COME FUNZIONA
@@ -186,6 +187,10 @@ SCRIVERE UNA STRATEGIA
 I file che la strategia scrive in InitContext::strLogDir vengono archiviati con il ciclo
 automaticamente.
 
+Una strategia che salva un suo stato (per esempio accanto al suo .ini) lo ricarica solo se
+InitContext::bResume e' true, cioe' quando il motore riprende una simulazione salvata. Se e'
+false la corsa parte da capo e lo stato lasciato da una corsa precedente va ignorato.
+
 
 CONFIGURAZIONE
 --------------
@@ -219,7 +224,7 @@ RISULTATI
 TEST
 ----
 
-./comp_All.sh test lancia 12 test su dati reali fissi (file/Tests/Data: BTCUSDT 1h e funding,
+./comp_All.sh test lancia 13 test su dati reali fissi (file/Tests/Data: BTCUSDT 1h e funding,
 2023-2024):
 
     loader_not_strategy     il motore rifiuta una libreria che non e' una strategia,
@@ -233,6 +238,8 @@ TEST
     golden_high_first       percorso estremo dentro la candela: prima il massimo
     golden_bitget           parametri reali dell'exchange: margine a scaglioni, slippage
                             basso, moltiplicatore del funding
+    no_liquidation_warning  con liquidation = 0 il motore avvisa quando l'equity va sotto
+                            zero: il risultato non e' realistico
     resume                  una corsa fermata a meta' candela e ripresa da' gli stessi cicli
                             di una senza interruzioni
     benchmark               passi al secondo (solo misura)

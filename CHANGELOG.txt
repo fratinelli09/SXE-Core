@@ -1,0 +1,33 @@
+SXE Core - changes
+==================
+
+Version numbers: architecture.structure.fix
+The strategy interface has its own number (SXE_API_VERSION in file/SDK/StrategyBase.h):
+the engine refuses strategies built for a different one.
+
+
+1.0.1 - 2026-10-22
+------------------
+
+Fixes
+
+* A strategy could not tell a resumed simulation from a new one.
+  A strategy that saves its own state reloaded the state of a previous run even when the
+  simulation started from scratch (resume = 0). InitContext now has bResume: true only when
+  the engine has restored a saved simulation state, false otherwise.
+  Strategy interface 1 -> 2: strategies must be rebuilt.
+
+* With liquidation = 0 a simulation could give unrealistic results without any notice.
+  A position whose equity goes below zero would already have been liquidated on a real
+  exchange. The engine now prints a warning the first time this happens in a cycle and the
+  final summary reports how many cycles went below zero.
+
+Tests
+
+* no_liquidation_warning: the warning is printed when liquidation is disabled.
+
+
+1.0.0 - 2026-10-22
+------------------
+
+First public release.

@@ -23,6 +23,7 @@ public:
 struct InitContext
 {
 	Mode          eMode;
+	bool          bResume;
 	std::string   strSymbol;
 	long long     nStartTime;
 	std::string   strLogDir;

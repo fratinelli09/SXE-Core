@@ -67,6 +67,10 @@ private:
 	bool              bStrategyStarted;
 	bool              bArchiveOpenCycle;
 	bool              bSaveNow;
+	bool              bResumed;
+	bool              bLiquidation;
+	bool              bUnderwater;
+	long long         nUnderwater;
 	int               nExitCode;
 
 	long long         nStartStep;

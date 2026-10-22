@@ -28,13 +28,13 @@ set(TEMPLATE_CONFIG   ${CMAKE_SOURCE_DIR}/Target/Config/Template.ini)
 #----------------------------------------------------------
 # sxe_test_config(<name> LIBRARY .. FOLDER .. STRATEGY_CONFIG .. [DIR ..] [RESUME 0|1]
 #                 [INTRABAR n] [MARGIN isolated|crossed] [END_DATE YYYY-MM-DD]
-#                 [SLIPPAGE x] [FUNDING_MULT x] [TIERS "limit:rate, ..."] [CAPITAL x])
+#                 [SLIPPAGE x] [FUNDING_MULT x] [TIERS "limit:rate, ..."] [CAPITAL x] [LIQUIDATION 0|1])
 # defaults = rules the references were created with: slippage 0.02%, funding x1,
 # maintenance margin 0.4% on the whole position, capital 5000
 # generates CMakeWork/file/Tests/<name>.ini; DIR = Log and Backup folder (default <name>)
 #----------------------------------------------------------
 function(sxe_test_config NAME)
-    cmake_parse_arguments(ARG "" "LIBRARY;FOLDER;STRATEGY_CONFIG;DIR;RESUME;INTRABAR;MARGIN;END_DATE;SLIPPAGE;FUNDING_MULT;TIERS;CAPITAL" "" ${ARGN})
+    cmake_parse_arguments(ARG "" "LIBRARY;FOLDER;STRATEGY_CONFIG;DIR;RESUME;INTRABAR;MARGIN;END_DATE;SLIPPAGE;FUNDING_MULT;TIERS;CAPITAL;LIQUIDATION" "" ${ARGN})
     set(T_NAME            ${NAME})
     set(T_LIBRARY         ${ARG_LIBRARY})
     set(T_STRATEGY_FOLDER ${ARG_FOLDER})
@@ -48,7 +48,8 @@ function(sxe_test_config NAME)
     set(T_FUNDING_MULT    1)
     set(T_TIERS           "1000000000000000:0.004")
     set(T_CAPITAL         5000)
-    foreach(OPT SLIPPAGE FUNDING_MULT TIERS CAPITAL)
+    set(T_LIQUIDATION     1)
+    foreach(OPT SLIPPAGE FUNDING_MULT TIERS CAPITAL LIQUIDATION)
         if(DEFINED ARG_${OPT})
             set(T_${OPT} "${ARG_${OPT}}")
         endif()
@@ -124,6 +125,12 @@ sxe_test_config(golden_high_first LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
 sxe_test_config(golden_bitget LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini CAPITAL 100000 SLIPPAGE 0.00005 FUNDING_MULT 2
                 TIERS "200000:0.004, 1000000:0.005, 5000000:0.007, 15000000:0.01, 50000000:0.02")
+
+# liquidation off: the engine warns that the result is not realistic when the equity goes below zero
+sxe_test_config(no_liquidation_warning LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini LIQUIDATION 0)
+add_test(NAME no_liquidation_warning COMMAND SXE ${TEST_DIR}/no_liquidation_warning.ini)
+set_tests_properties(no_liquidation_warning PROPERTIES PASS_REGULAR_EXPRESSION "Equity below zero .* = 0: on a real account")
 
 foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_first golden_high_first golden_bitget)
     add_test(NAME ${GOLDEN_TEST}
