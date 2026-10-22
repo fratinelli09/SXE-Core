@@ -268,10 +268,15 @@ This repository is the public edition of SXE Core, kept at the version described
 Engine features developed afterwards belong to the author's private edition and are listed
 below.
 
-    Parameter tuning                                                          planned
+    Parameter tuning                                                   in development
         Multi-run optimisation of the strategy parameters: many simulations in parallel on
         the same data, ranking by return, drawdown and liquidations, check on a period not
         used for the tuning. Separate program: SXE keeps running on its own without it.
+        Done: many independent engines in one process, in parallel on all cores, sharing
+        the market data read once; light runs without per-cycle files, about 10 times
+        faster than a full run, with results identical to the cent.
+        Next: the SXE_Tune program, configured by Optimize.ini (parameter ranges, grid
+        search, results of every combination in a CSV file).
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)
