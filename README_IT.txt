@@ -296,8 +296,13 @@ sono elencate qui sotto.
         Fatto: piu' motori indipendenti nello stesso processo, in parallelo su tutti i core,
         con i dati di mercato letti una volta sola; corse leggere senza i file dei cicli,
         circa 10 volte piu' veloci di una corsa completa, con risultati identici al centesimo.
-        Prossimo passo: il programma SXE_Tune, configurato da Optimize.ini (intervalli dei
-        parametri, ricerca a griglia, risultati di ogni combinazione in un file CSV).
+        Fatto: il programma SXE_Tune. Optimize.ini elenca i parametri della strategia da
+        far variare (intervalli, elenchi o valori fissi) e SXE_Tune prova tutte le
+        combinazioni (ricerca a griglia) su tutti i core; ogni corsa e' scritta in un file
+        CSV appena finisce, con rendimento, drawdown, cicli, liquidazioni, commissioni e
+        funding. Funziona con qualunque strategia: i parametri sono le chiavi del suo .ini.
+        Prossimo passo: ricerca casuale per le griglie grandi, vincoli (drawdown massimo,
+        nessuna liquidazione, cicli minimi) e classifica dei risultati.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e

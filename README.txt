@@ -282,8 +282,13 @@ below.
         Done: many independent engines in one process, in parallel on all cores, sharing
         the market data read once; light runs without per-cycle files, about 10 times
         faster than a full run, with results identical to the cent.
-        Next: the SXE_Tune program, configured by Optimize.ini (parameter ranges, grid
-        search, results of every combination in a CSV file).
+        Done: the SXE_Tune program. Optimize.ini lists the strategy parameters to vary
+        (ranges, lists or fixed values) and SXE_Tune runs every combination (grid search)
+        on all cores; each run is written to a CSV file as soon as it ends, with return,
+        drawdown, cycles, liquidations, fees and funding. Any strategy can be tuned: the
+        parameters are the keys of its .ini.
+        Next: random search for large grids, constraints (maximum drawdown, no
+        liquidations, minimum cycles) and ranking of the results.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)
