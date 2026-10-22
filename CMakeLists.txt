@@ -1,0 +1,78 @@
+#==========================================================
+# SXE Core - Strategy eXecution Engine
+#
+#   cmake -S . -B CMakeWork
+#   cmake --build CMakeWork
+#   cmake --install CMakeWork          -> installs into Target/
+#
+# or ./comp_All.sh, which runs all three steps
+#==========================================================
+cmake_minimum_required(VERSION 3.16)
+project(SXE VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Tipo di build" FORCE)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wall -Wextra)
+endif()
+
+# default install prefix: the project's runtime folder
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/Target" CACHE PATH "Cartella di esecuzione" FORCE)
+endif()
+
+# folders inside Target/
+set(SXE_BIN_DIR      Bin)
+set(SXE_STRATEGY_DIR Bin/Strategies)
+set(SXE_CONFIG_DIR   Config)
+
+# executable and libraries live in Target/Bin and find each other without LD_LIBRARY_PATH
+set(CMAKE_INSTALL_RPATH "$ORIGIN")
+
+include(cmake/SXEStrategy.cmake)
+
+# sources: everything in file/, each part depends only on the ones before it
+add_subdirectory(file/Common)
+add_subdirectory(file/Settings)
+add_subdirectory(file/SDK)
+add_subdirectory(file/DataFeed)
+add_subdirectory(file/Exchange)
+add_subdirectory(file/Engine)
+add_subdirectory(file/App)
+
+# strategies: every folder of file/Strategies with a CMakeLists.txt is built,
+# together with its tests if it has a Test subfolder with a CMakeLists.txt
+file(GLOB SXE_STRATEGY_DIRS LIST_DIRECTORIES true "${CMAKE_SOURCE_DIR}/file/Strategies/*")
+list(SORT SXE_STRATEGY_DIRS)
+set(SXE_STRATEGY_TEST_DIRS "")
+foreach(STRATEGY_DIR ${SXE_STRATEGY_DIRS})
+    if(IS_DIRECTORY "${STRATEGY_DIR}" AND EXISTS "${STRATEGY_DIR}/CMakeLists.txt")
+        add_subdirectory("${STRATEGY_DIR}")
+        if(EXISTS "${STRATEGY_DIR}/Test/CMakeLists.txt")
+            list(APPEND SXE_STRATEGY_TEST_DIRS "${STRATEGY_DIR}/Test")
+        endif()
+    endif()
+endforeach()
+
+# test (CTest): ./comp_All.sh test
+option(SXE_TESTS "Compila i test" ON)
+if(SXE_TESTS)
+    enable_testing()
+    add_subdirectory(file/Tests)
+    foreach(TEST_DIR ${SXE_STRATEGY_TEST_DIRS})
+        add_subdirectory("${TEST_DIR}")
+    endforeach()
+endif()
+
+# runtime folders
+install(DIRECTORY DESTINATION ${SXE_BIN_DIR})
+install(DIRECTORY DESTINATION ${SXE_STRATEGY_DIR})
+install(DIRECTORY DESTINATION ${SXE_CONFIG_DIR})
+install(DIRECTORY DESTINATION Log)
+install(DIRECTORY DESTINATION Backup)

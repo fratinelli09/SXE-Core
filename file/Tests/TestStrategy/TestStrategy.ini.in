@@ -1,0 +1,5 @@
+[TEST]
+tp           = 2
+leverage     = @T_LEVERAGE@
+order_perc   = 50
+stop_at_step = @T_STOP_AT_STEP@
