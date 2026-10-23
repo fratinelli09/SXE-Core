@@ -297,6 +297,11 @@ sono elencate qui sotto.
         pronto per SXE; verifica dei migliori su periodi non usati per il tuning.
         Prossimo passo: robustezza delle combinazioni vicine e stress con costi piu' alti.
 
+    Ordini limite                                                          in sviluppo
+        Ordini limite accanto a quelli a mercato: piazzati, spostati e cancellati dalla
+        strategia, eseguiti quando il prezzo li raggiunge, con la commissione maker invece
+        della taker e senza slippage; registro ordini e risultati mostrano tipo e commissione.
+
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e
         tuning dei parametri da una finestra. Programma separato: SXE continua a funzionare

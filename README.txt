@@ -284,6 +284,11 @@ below.
         check of the best results on periods not used for the tuning.
         Next: robustness of the neighbouring combinations and stress with higher costs.
 
+    Limit orders                                                       in development
+        Limit orders next to market orders: placed, moved and cancelled by the strategy,
+        filled when the price reaches them, with the maker fee instead of the taker fee and
+        no slippage; the order log and the results show the type and the fee of each order.
+
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)
         and parameter tuning from a window. Separate program: SXE keeps running on its own
