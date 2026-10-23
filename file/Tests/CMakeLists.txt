@@ -28,13 +28,14 @@ set(TEMPLATE_CONFIG   ${CMAKE_SOURCE_DIR}/Target/Config/Template.ini)
 #----------------------------------------------------------
 # sxe_test_config(<name> LIBRARY .. FOLDER .. STRATEGY_CONFIG .. [DIR ..] [RESUME 0|1]
 #                 [INTRABAR n] [MARGIN isolated|crossed] [END_DATE YYYY-MM-DD]
-#                 [SLIPPAGE x] [FUNDING_MULT x] [TIERS "limit:rate, ..."] [CAPITAL x] [LIQUIDATION 0|1])
+#                 [SLIPPAGE x] [FUNDING_MULT x] [TIERS "limit:rate, ..."] [CAPITAL x] [LIQUIDATION 0|1]
+#                 [DATA_FILE file] [LIMIT_FILL through|touch])
 # defaults = rules the references were created with: slippage 0.02%, funding x1,
 # maintenance margin 0.4% on the whole position, capital 5000
 # generates CMakeWork/file/Tests/<name>.ini; DIR = Log and Backup folder (default <name>)
 #----------------------------------------------------------
 function(sxe_test_config NAME)
-    cmake_parse_arguments(ARG "" "LIBRARY;FOLDER;STRATEGY_CONFIG;DIR;RESUME;INTRABAR;MARGIN;END_DATE;SLIPPAGE;FUNDING_MULT;TIERS;CAPITAL;LIQUIDATION" "" ${ARGN})
+    cmake_parse_arguments(ARG "" "LIBRARY;FOLDER;STRATEGY_CONFIG;DIR;RESUME;INTRABAR;MARGIN;END_DATE;SLIPPAGE;FUNDING_MULT;TIERS;CAPITAL;LIQUIDATION;DATA_FILE;LIMIT_FILL" "" ${ARGN})
     set(T_NAME            ${NAME})
     set(T_LIBRARY         ${ARG_LIBRARY})
     set(T_STRATEGY_FOLDER ${ARG_FOLDER})
@@ -49,7 +50,9 @@ function(sxe_test_config NAME)
     set(T_TIERS           "1000000000000000:0.004")
     set(T_CAPITAL         5000)
     set(T_LIQUIDATION     1)
-    foreach(OPT SLIPPAGE FUNDING_MULT TIERS CAPITAL LIQUIDATION)
+    set(T_DATA_FILE       BTCUSDT_1h_2023_2024.csv)
+    set(T_LIMIT_FILL      through)
+    foreach(OPT SLIPPAGE FUNDING_MULT TIERS CAPITAL LIQUIDATION DATA_FILE LIMIT_FILL)
         if(DEFINED ARG_${OPT})
             set(T_${OPT} "${ARG_${OPT}}")
         endif()
@@ -69,16 +72,24 @@ function(sxe_test_config NAME)
     configure_file(${SXE_TEST_SOURCE_DIR}/EngineConfig.test.ini.in ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.ini @ONLY)
 endfunction()
 
-# test strategy configurations: leverage and step at which to stop
+# test strategy configurations: leverage, step at which to stop [, limit_dip: % below the entry of a
+# limit buy, with a limit close at +tp%; 0 = market orders only]
 function(sxe_test_strategy_config NAME LEVERAGE STOP_AT_STEP)
     set(T_LEVERAGE     ${LEVERAGE})
     set(T_STOP_AT_STEP ${STOP_AT_STEP})
+    set(T_LIMIT_DIP    0)
+    if(ARGC GREATER 3)
+        set(T_LIMIT_DIP ${ARGV3})
+    endif()
     configure_file(TestStrategy/TestStrategy.ini.in ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.ini @ONLY)
 endfunction()
 
 sxe_test_strategy_config(TestStrategy_lev3  3  0)
 sxe_test_strategy_config(TestStrategy_lev10 10 0)
 sxe_test_strategy_config(TestStrategy_stop  3  123457)
+sxe_test_strategy_config(TestStrategy_limit       3 0      3)
+sxe_test_strategy_config(TestStrategy_limit_stop  3 123457 3)
+sxe_test_strategy_config(TestStrategy_limit_small 1 0      2)
 
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -132,7 +143,11 @@ sxe_test_config(no_liquidation_warning LIBRARY libTestStrategy.so FOLDER ${TEST_
 add_test(NAME no_liquidation_warning COMMAND SXE ${TEST_DIR}/no_liquidation_warning.ini)
 set_tests_properties(no_liquidation_warning PROPERTIES PASS_REGULAR_EXPRESSION "Equity below zero .* = 0: on a real account")
 
-foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_first golden_high_first golden_bitget)
+# limit orders: entry at market, limit buy 3% lower, limit close at +2% moved when the average price changes
+sxe_test_config(golden_limit LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini)
+
+foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_first golden_high_first golden_bitget golden_limit)
     add_test(NAME ${GOLDEN_TEST}
              COMMAND ${CMAKE_COMMAND} -DMODE=GOLDEN -DSXE=$<TARGET_FILE:SXE>
                      -DCONFIG=${TEST_DIR}/${GOLDEN_TEST}.ini -DDIR=${TEST_DIR}/${GOLDEN_TEST}
@@ -151,6 +166,46 @@ add_test(NAME resume
                  -DCONFIG_FULL=${TEST_DIR}/resume_full.ini -DDIR_FULL=${TEST_DIR}/resume_full
                  -DCONFIG_STOP=${TEST_DIR}/resume_stop.ini -DCONFIG_RESUME=${TEST_DIR}/resume_continue.ini
                  -DDIR_RESUME=${TEST_DIR}/resume_split -P ${SXE_TEST_SCRIPT})
+
+# the same with open limit orders: the state keeps them
+sxe_test_config(resume_limit_full LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini RESUME 1)
+sxe_test_config(resume_limit_stop LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit_stop.ini DIR resume_limit_split RESUME 1)
+sxe_test_config(resume_limit_continue LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini DIR resume_limit_split RESUME 1)
+add_test(NAME resume_limit
+         COMMAND ${CMAKE_COMMAND} -DMODE=RESUME -DSXE=$<TARGET_FILE:SXE>
+                 -DCONFIG_FULL=${TEST_DIR}/resume_limit_full.ini -DDIR_FULL=${TEST_DIR}/resume_limit_full
+                 -DCONFIG_STOP=${TEST_DIR}/resume_limit_stop.ini -DCONFIG_RESUME=${TEST_DIR}/resume_limit_continue.ini
+                 -DDIR_RESUME=${TEST_DIR}/resume_limit_split -P ${SXE_TEST_SCRIPT})
+
+#--- 3b. limit orders on hand-made candles ------------------------------------
+# entry at 100 at the first step (no slippage), limit buy at 98, limit close at +2% of the average price.
+# 01:00 the low touches 98: filled only with limit_fill = touch; 02:00 the low goes 0.3% below:
+# filled with through (tick_step 0.2%); 03:00 the high reaches 104: the close is filled at its price.
+# Limit fills at the limit price with the maker fee 0.02%; the cycle is closed by "limit".
+foreach(LIMIT_FILL through touch)
+    if(LIMIT_FILL STREQUAL "through")
+        set(LIMIT_HOUR 02)
+        set(LIMIT_ABSENT "^2024-01-01 01:[^|]*\\|FILL_BUY")
+    else()
+        set(LIMIT_HOUR 01)
+        set(LIMIT_ABSENT "^2024-01-01 02:[^|]*\\|FILL_BUY")
+    endif()
+    sxe_test_config(limit_${LIMIT_FILL} LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                    STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit_small.ini SLIPPAGE 0
+                    DATA_FILE BTCUSDT_limit_test.csv LIMIT_FILL ${LIMIT_FILL})
+    add_test(NAME limit_${LIMIT_FILL}
+             COMMAND ${CMAKE_COMMAND} -DMODE=ORDERS -DSXE=$<TARGET_FILE:SXE>
+                     -DCONFIG=${TEST_DIR}/limit_${LIMIT_FILL}.ini -DDIR=${TEST_DIR}/limit_${LIMIT_FILL}
+                     "-DMATCH1=^2024-01-01 01:00[^|]*\\|BUY\\|100.00\\|100.00\\|25.000000\\|1.5000\\|.*\\|market\\|\\|\\|0.000600$"
+                     "-DMATCH2=^2024-01-01 ${LIMIT_HOUR}:[^|]*\\|FILL_BUY\\|[^|]*\\|98.00\\|12.747400\\|0.2498\\|.*\\|limit\\|1\\|98.00\\|0.000200$"
+                     "-DMATCH3=\\|FILL_CLOSE\\|[^|]*\\|101.31\\|37.747400\\|0.7648\\|.*\\|limit\\|2\\|101.31\\|0.000200$"
+                     "-DMATCH4=\\|MOVE\\|"
+                     "-DABSENT=${LIMIT_ABSENT}" "-DRESULT_MATCH=^1\\|.*\\|limit$"
+                     -P ${SXE_TEST_SCRIPT})
+endforeach()
 
 #--- 4. speed (measurement only) ---------------------------------------------
 sxe_test_config(benchmark LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}

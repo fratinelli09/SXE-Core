@@ -7,10 +7,10 @@ of USDT-margined perpetual futures.
 The strategy is compiled as a separate shared library (.so) and knows nothing about where its
 prices come from. The engine loads it at runtime, checks its interface, feeds it market data
 step by step and executes its orders on a simulated exchange that reproduces the rules of a
-real one: fees, slippage, isolated/cross margin, tiered maintenance margin, funding every
-8 hours and liquidation.
+real one: market and limit orders, taker and maker fees, slippage, isolated/cross margin,
+tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.0.1 - changes in CHANGELOG.txt
+Version 1.1.0 - changes in CHANGELOG.txt
 Italian version: README_IT.txt
 
 
@@ -27,7 +27,10 @@ HIGHLIGHTS
   Same inputs, same result to the cent: verified by golden tests.
 
 * Realistic futures simulation (modelled on Bitget BTCUSDT perpetual, all values configurable)
-  - taker fee and slippage on every fill, quantity step, minimum quantity, minimum notional
+  - market orders with taker fee and slippage; limit orders (buy, close) with maker fee and
+    no slippage, filled at their price when the market goes through them by one tick (or
+    just touches them), with the margin of open buy orders reserved
+  - quantity step, minimum quantity, minimum notional
   - isolated or cross margin
   - progressive tiered maintenance margin (each slice of the position pays its tier's rate)
     and a tier-by-tier liquidation price solver
@@ -61,7 +64,7 @@ HIGHLIGHTS
   intra-candle ticks run in 0.2 seconds.
 
 * Tested
-  13 CTest tests on fixed real market data (BTCUSDT 2023-2024).
+  17 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles.
 
 
 HOW IT WORKS
@@ -98,8 +101,17 @@ The strategy implements five methods, called in this order:
 
 Run() executes one step and returns: the loop belongs to the engine. The strategy never reads
 the clock, never touches the network and never talks to the exchange directly. Time, prices,
-account and position arrive in the context; orders go through ctx.orders.MarketBuy(usdt,
-leverage) and ctx.orders.Close(), which are synchronous.
+account and position arrive in the context; orders go through ctx.orders, synchronously:
+
+    MarketBuy(usdt, leverage)         buy at market (taker fee, slippage)
+    Close()                           close the whole position at market
+    LimitBuy(price, usdt, leverage)   buy limit below the market (maker fee when filled)
+    LimitClose(price)                 close limit of the whole position above the market
+    Move(id, price), Cancel(id), CancelAll()
+
+Every result says the order type (market or limit), the fee rate and the order id. Open limit
+orders are in ctx.vOpenOrders, the limit orders filled since the previous step in ctx.vFills.
+On a liquidation the exchange cancels all open orders.
 
 
 QUICK START
@@ -194,11 +206,11 @@ Target/Config/EngineConfig.ini, every key is commented in the file:
     [ENGINE]       mode (SIM), symbol
     [STRATEGY]     strategy library and its configuration file
     [PATH]         Log, Backup and historical data folders
-    [EXCHANGE]     margin mode, taker fee, slippage, maintenance margin tiers,
+    [EXCHANGE]     margin mode, taker and maker fees, slippage, maintenance margin tiers,
                    quantity step, minimum notional
     [SIMULATION]   date range, initial capital, data and funding files, funding fallback and
-                   multiplier, intra-candle path, liquidation on/off, resume, state and order
-                   log files
+                   multiplier, intra-candle path, when a limit order is filled, liquidation
+                   on/off, resume, state and order log files
     [LOG]          info / warning / error / console output
 
 
@@ -206,7 +218,8 @@ OUTPUT
 ------
 
     Target/Log/                        files of the cycle in progress: log.txt, error.txt,
-                                       order log, strategy files, simulation state
+                                       order log (type, price, fee and fee rate of every
+                                       order), strategy files, simulation state
     Target/Backup/b<N>/                one folder per closed cycle: result.txt (open/close,
                                        prices, growth, drawdown, max leverage, fees, funding)
                                        plus the files moved from Log
@@ -216,8 +229,8 @@ OUTPUT
 TESTS
 -----
 
-./comp_All.sh test runs 13 tests on fixed real data (file/Tests/Data: BTCUSDT 1h and funding,
-2023-2024):
+./comp_All.sh test runs 17 tests on fixed real data (file/Tests/Data: BTCUSDT 1h and funding,
+2023-2024) and on a few hand-made candles:
 
     loader_not_strategy     the engine rejects a library that is not a strategy,
     loader_old_api          was built with another interface version,
@@ -230,10 +243,16 @@ TESTS
     golden_high_first       extreme intra-candle path: high first
     golden_bitget           real exchange parameters: tiered maintenance margin,
                             low slippage, funding multiplier
+    golden_limit            limit buy and limit close, the close moved when the average
+                            price changes
     no_liquidation_warning  with liquidation = 0 the engine warns when the equity goes below
                             zero: the result is not realistic
     resume                  a run stopped mid-candle and resumed gives the same cycles as an
                             uninterrupted one
+    resume_limit            the same with open limit orders
+    limit_through           hand-made candles: a limit only touched is not filled, one
+                            gone through by a tick is filled at its price with the maker fee
+    limit_touch             the same with limit_fill = touch: filled as soon as it is touched
     benchmark               steps per second (measurement only)
 
 Golden tests compare every cycle with the references in file/Tests/Golden: any change to the
@@ -264,7 +283,7 @@ LIMITS OF THE PUBLIC EDITION
 ----------------------------
 
 * Simulation only: mode = REAL is reserved for live trading, not part of this edition.
-* Long positions with market orders (open/increase, full close), one symbol per run.
+* Long positions with market and limit orders (open/increase, full close), one symbol per run.
 * Linux only (strategies are loaded with dlopen).
 
 
@@ -283,11 +302,6 @@ below.
         to check before the start; constraints, ranking and the best .ini ready for SXE;
         check of the best results on periods not used for the tuning.
         Next: robustness of the neighbouring combinations and stress with higher costs.
-
-    Limit orders                                                       in development
-        Limit orders next to market orders: placed, moved and cancelled by the strategy,
-        filled when the price reaches them, with the maker fee instead of the taker fee and
-        no slippage; the order log and the results show the type and the fee of each order.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)

@@ -32,6 +32,11 @@ private:
 		explicit COrderRouter(CEngine& engine): engine(engine) {}
 		OrderResult MarketBuy(double dUsdt, double dLeverage) override;
 		OrderResult Close() override;
+		OrderResult LimitBuy(double dPrice, double dUsdt, double dLeverage) override;
+		OrderResult LimitClose(double dPrice) override;
+		OrderResult Move(long long nOrderId, double dPrice) override;
+		bool Cancel(long long nOrderId) override;
+		void CancelAll() override;
 	private:
 		CEngine& engine;
 	};
@@ -39,6 +44,7 @@ private:
 	bool _Resume(const CSettings& settings);
 	void _SaveState();
 	void _OnLiquidation();
+	void _OnFill(const Fill& fill);
 	void _Finish(bool bError, const std::string& strReason);
 	void _ArchiveCycle();
 	void _ArchiveOpenCycle();
@@ -71,6 +77,7 @@ private:
 	bool              bLiquidation;
 	bool              bUnderwater;
 	long long         nUnderwater;
+	long long         nOrdersVersion;
 	int               nExitCode;
 
 	long long         nStartStep;

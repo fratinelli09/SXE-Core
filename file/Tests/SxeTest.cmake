@@ -9,6 +9,10 @@
 #       uninterrupted run against a run stopped halfway (CONFIG_STOP) and resumed
 #       (CONFIG_RESUME): the cycles must be identical. STOP_REGEX: how the stopped
 #       run must end (default: stop requested by the strategy)
+#   MODE=ORDERS  SXE CONFIG DIR MATCH1..MATCH4 ABSENT RESULT_MATCH
+#       simulation from scratch; the order log must contain a line matching each MATCHn and
+#       none matching ABSENT, total_result.txt a line matching RESULT_MATCH
+#       (in the regular expressions the field separator ';' is written '|')
 #   MODE=BENCH   SXE CONFIG DIR
 #       full simulation, prints the steps per second (never fails because of speed).
 #==========================================================
@@ -132,6 +136,40 @@ elseif(MODE STREQUAL "RESUME")
     endif()
     list(LENGTH vFull nCycles)
     message(STATUS "Resumed run identical to the uninterrupted one (${nCycles} cycles)")
+
+elseif(MODE STREQUAL "ORDERS")
+    run_sxe("${CONFIG}" "${DIR}" TRUE)
+    file(GLOB vOrderLogs "${DIR}/Backup/b*/Set_Close_log.txt" "${DIR}/Log/Set_Close_log.txt")
+    set(vOrders "")
+    foreach(strFile IN LISTS vOrderLogs)
+        read_lines("${strFile}" vLines)
+        list(APPEND vOrders ${vLines})
+    endforeach()
+    foreach(strMatch IN ITEMS "${MATCH1}" "${MATCH2}" "${MATCH3}" "${MATCH4}")
+        if(strMatch)
+            set(vFound ${vOrders})
+            list(FILTER vFound INCLUDE REGEX "${strMatch}")
+            if(NOT vFound)
+                list(JOIN vOrders "\n" strAll)
+                message(FATAL_ERROR "No order matches '${strMatch}'\n${strAll}")
+            endif()
+        endif()
+    endforeach()
+    if(ABSENT)
+        set(vFound ${vOrders})
+        list(FILTER vFound INCLUDE REGEX "${ABSENT}")
+        if(vFound)
+            message(FATAL_ERROR "Unexpected order matching '${ABSENT}': ${vFound}")
+        endif()
+    endif()
+    if(RESULT_MATCH)
+        read_lines("${DIR}/Backup/total_result.txt" vResult)
+        list(FILTER vResult INCLUDE REGEX "${RESULT_MATCH}")
+        if(NOT vResult)
+            message(FATAL_ERROR "No line of total_result.txt matches '${RESULT_MATCH}'")
+        endif()
+    endif()
+    message(STATUS "Order log as expected")
 
 elseif(MODE STREQUAL "BENCH")
     run_sxe("${CONFIG}" "${DIR}" TRUE)

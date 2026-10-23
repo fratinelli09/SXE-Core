@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 #include "Logger.h"
 #include "Types.h"
@@ -18,6 +19,12 @@ public:
 
 	virtual OrderResult MarketBuy(double dUsdt, double dLeverage) = 0;
 	virtual OrderResult Close() = 0;
+
+	virtual OrderResult LimitBuy(double dPrice, double dUsdt, double dLeverage) = 0;
+	virtual OrderResult LimitClose(double dPrice) = 0;
+	virtual OrderResult Move(long long nOrderId, double dPrice) = 0;
+	virtual bool Cancel(long long nOrderId) = 0;
+	virtual void CancelAll() = 0;
 };
 
 struct InitContext
@@ -49,6 +56,9 @@ struct StepContext
 	Position      position;
 
 	bool          bLiquidated;
+
+	std::vector<LimitOrder> vOpenOrders;
+	std::vector<Fill>       vFills;
 
 	IOrders&      orders;
 	Logger&       log;

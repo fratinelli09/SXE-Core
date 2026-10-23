@@ -29,6 +29,7 @@
 #define CFG_EXCHANGE_SECTION                "EXCHANGE"
 #define CFG_EXCHANGE_MARGIN_MODE            "margin_mode"
 #define CFG_EXCHANGE_FEE_TAKER              "fee_taker"
+#define CFG_EXCHANGE_FEE_MAKER              "fee_maker"
 #define CFG_EXCHANGE_SLIPPAGE               "slippage"
 #define CFG_EXCHANGE_MAINT_MARGIN           "maintenance_margin"
 #define CFG_EXCHANGE_MAINT_TIERS            "maintenance_tiers"
@@ -52,6 +53,9 @@
 #define CFG_SIM_INTRABAR                    "intrabar"
 #define CFG_SIM_TICK_STEP                   "tick_step"
 #define CFG_SIM_LIQUIDATION                 "liquidation"
+#define CFG_SIM_LIMIT_FILL                  "limit_fill"
+#define CFG_LIMIT_FILL_THROUGH              "through"
+#define CFG_LIMIT_FILL_TOUCH                "touch"
 #define CFG_SIM_SAVE_EVERY                  "save_every"
 
 #define CFG_REAL_SECTION                    "REAL"
@@ -121,6 +125,7 @@ public:
     {
         std::string strMarginMode      = CFG_MARGIN_ISOLATED;
         double      dFeeTaker          = 0.0006;
+        double      dFeeMaker          = 0.0002;
         double      dSlippage          = 0.0002;
         double      dMaintenanceMargin = 0.004;
         std::vector<std::pair<double, double>> vMaintenanceTiers;
@@ -144,6 +149,7 @@ public:
         int         nIntrabar        = 1;
         double      dTickStep        = 0.002;
         int         nLiquidation     = 1;
+        std::string strLimitFill     = CFG_LIMIT_FILL_THROUGH;
         int         nSaveEvery       = 500;
     };
 

@@ -37,7 +37,11 @@ CSimExchange::CSimExchange(const ExchangeRules& rules_, double dInitialCapital):
 	nFundingSlot(-1),
 	bLiquidated(false),
 	nTime(0),
-	dPrice(0)
+	dPrice(0),
+	bLimitThrough(true),
+	dLimitTick(0),
+	nNextOrderId(1),
+	nOrdersVersion(0)
 {
 	account.dWallet = dInitialCapital;
 	_Update();
@@ -48,6 +52,12 @@ void CSimExchange::SetSimRules(bool bLiquidation_, double dFundingRate_, double 
 	bLiquidation       = bLiquidation_;
 	dFundingRate       = dFundingRate_;
 	dFundingMultiplier = dFundingMultiplier_;
+}
+
+void CSimExchange::SetLimitRules(bool bThrough, double dTickStep)
+{
+	bLimitThrough = bThrough;
+	dLimitTick    = dTickStep;
 }
 
 void CSimExchange::SetMaintenanceTiers(const std::vector<std::pair<double, double>>& vNewTiers)
@@ -192,6 +202,8 @@ bool CSimExchange::Refresh(long long nNewTime, double dNewPrice)
 	nTime  = nNewTime;
 	dPrice = dNewPrice;
 
+	_CheckOrders();
+
 	if(bLiquidation && position.bOpen && position.dQty > 0)
 	{
 		const double dEquity = _Collateral() + position.dQty * (dPrice - position.dAvgPrice);
@@ -233,6 +245,9 @@ void CSimExchange::_Liquidate()
 	r.dFillPrice = dPrice;
 	r.dQty       = lastLiquidation.positionBefore.dQty;
 	_LogOrder("LIQUIDATION", r);
+
+	while(!vOrders.empty())
+		_Remove(vOrders.size() - 1, "liquidation");
 }
 
 void CSimExchange::_Update()
@@ -252,6 +267,7 @@ void CSimExchange::_Update()
 		account.dAvailable = account.dWallet - position.dMargin;
 	else
 		account.dAvailable = account.dEquity - position.dQty * dPrice / position.dLeverage;
+	account.dAvailable -= _Reserved();
 
 	if(account.dAvailable < 0)
 		account.dAvailable = 0;
@@ -300,6 +316,16 @@ OrderResult CSimExchange::MarketBuy(double dUsdt, double dLeverage)
 	if(dNeeded > account.dAvailable + 1e-9)
 		return _Reject("insufficient available margin");
 
+	const OrderResult r = _ApplyBuy(dQty, dFill, dLeverage, rules.dFeeTaker, OrderType::Market);
+	_LogOrder("BUY", r);
+	return r;
+}
+
+OrderResult CSimExchange::_ApplyBuy(double dQty, double dFill, double dLeverage, double dFeeRate, OrderType eType)
+{
+	const double dNotional = dQty * dFill;
+	const double dFee      = dNotional * dFeeRate;
+
 	const double dOldQty = position.bOpen ? position.dQty : 0.0;
 	const double dTotQty = dOldQty + dQty;
 	position.dAvgPrice  = (position.dAvgPrice * dOldQty + dFill * dQty) / dTotQty;
@@ -320,7 +346,8 @@ OrderResult CSimExchange::MarketBuy(double dUsdt, double dLeverage)
 	r.dFillPrice = dFill;
 	r.dQty       = dQty;
 	r.dFee       = dFee;
-	_LogOrder("BUY", r);
+	r.eType      = eType;
+	r.dFeeRate   = dFeeRate;
 	return r;
 }
 
@@ -329,10 +356,18 @@ OrderResult CSimExchange::Close()
 	if(!position.bOpen)
 		return _Reject("no open position");
 
-	const double dFill = dPrice * (1.0 - rules.dSlippage);
+	const OrderResult r = _ApplyClose(dPrice * (1.0 - rules.dSlippage), rules.dFeeTaker, OrderType::Market);
+	_LogOrder("CLOSE", r);
+	_CancelCloseOrders("position closed");
+	return r;
+}
+
+OrderResult CSimExchange::_ApplyClose(double dFill, double dFeeRate, OrderType eType)
+{
+	lastClosed = position;
 	const double dQty  = position.dQty;
 	const double dPnL  = (dFill - position.dAvgPrice) * dQty;
-	const double dFee  = dQty * dFill * rules.dFeeTaker;
+	const double dFee  = dQty * dFill * dFeeRate;
 
 	account.dWallet += dPnL - dFee;
 	stats.dFeesPaid    += dFee;
@@ -350,7 +385,8 @@ OrderResult CSimExchange::Close()
 	r.dFillPrice = dFill;
 	r.dQty       = dQty;
 	r.dFee       = dFee;
-	_LogOrder("CLOSE", r);
+	r.eType      = eType;
+	r.dFeeRate   = dFeeRate;
 	return r;
 }
 
@@ -363,6 +399,8 @@ CSimExchange::Snapshot CSimExchange::GetSnapshot() const
 	s.position     = position;
 	s.nFundingSlot = nFundingSlot;
 	s.stats        = stats;
+	s.vOrders      = vOrders;
+	s.nNextOrderId = nNextOrderId;
 	return s;
 }
 
@@ -374,21 +412,25 @@ void CSimExchange::Restore(const Snapshot& s)
 	position        = s.position;
 	nFundingSlot    = s.nFundingSlot;
 	stats           = s.stats;
+	vOrders         = s.vOrders;
+	nNextOrderId    = s.nNextOrderId;
+	nOrdersVersion++;
 	_Update();
 }
 
-OrderResult CSimExchange::_Reject(const std::string& strError)
+OrderResult CSimExchange::_Reject(const std::string& strError, OrderType eType)
 {
 	stats.nRejected++;
 
 	OrderResult r;
 	r.bOk      = false;
 	r.strError = strError;
+	r.eType    = eType;
 	_LogOrder("REJECT", r);
 	return r;
 }
 
-void CSimExchange::_LogOrder(const char* pszType, const OrderResult& r)
+void CSimExchange::_LogOrder(const char* pszType, const OrderResult& r, double dLimitPrice)
 {
 	if(strOrderLog.empty())
 		return;
@@ -400,12 +442,278 @@ void CSimExchange::_LogOrder(const char* pszType, const OrderResult& r)
 	orderLog.imbue(std::locale::classic());
 	orderLog << std::fixed;
 	if(bNew)
-		orderLog << "time;type;price;fill_price;qty;fee;wallet\n";
+		orderLog << "time;type;price;fill_price;qty;fee;wallet;order;id;limit_price;fee_rate\n";
 
 	orderLog << TimeUtils::Format(nTime) << ";" << pszType << ";" << std::setprecision(2) << dPrice << ";";
 	if(r.bOk)
 		orderLog << r.dFillPrice << ";" << std::setprecision(6) << r.dQty << ";" << std::setprecision(4) << r.dFee;
 	else
 		orderLog << r.strError << ";;";
-	orderLog << ";" << std::setprecision(2) << account.dWallet << "\n";
+	orderLog << ";" << std::setprecision(2) << account.dWallet << ";" << (r.eType == OrderType::Limit ? "limit" : "market") << ";";
+	if(r.nOrderId > 0)
+		orderLog << r.nOrderId;
+	orderLog << ";";
+	if(dLimitPrice > 0)
+		orderLog << dLimitPrice;
+	orderLog << ";";
+	if(r.bOk && r.dFeeRate > 0)
+		orderLog << std::setprecision(6) << r.dFeeRate;
+	orderLog << "\n";
+}
+
+double CSimExchange::_Reserved() const
+{
+	double dReserved = 0;
+	for(const LimitOrder& order : vOrders)
+		dReserved += order.dReserved;
+	return dReserved;
+}
+
+double CSimExchange::_BuyQty(double dLimit, double dUsdt, double dLeverage) const
+{
+	double dQty = dUsdt * dLeverage / dLimit;
+	if(rules.dQtyStep > 0)
+		dQty = std::floor(dQty / rules.dQtyStep + 1e-9) * rules.dQtyStep;
+	return dQty;
+}
+
+std::string CSimExchange::_CheckLimit(OrderSide eSide, double dLimit, double dQty) const
+{
+	if(!(dLimit > 0))
+		return "invalid limit price";
+	if(dPrice <= 0)
+		return "price not available yet";
+	if(eSide == OrderSide::Buy)
+	{
+		if(dLimit >= dPrice)
+			return "buy limit at or above the market price: it would be filled at once as a taker order";
+		if(dQty <= 0 || dQty + 1e-12 < rules.dMinQty)
+			return "quantity below the minimum";
+		if(dQty * dLimit < rules.dMinNotional)
+			return "order value below the minimum";
+	}
+	else if(dLimit <= dPrice)
+	{
+		return "close limit at or below the market price: it would be filled at once as a taker order";
+	}
+	return std::string();
+}
+
+OrderResult CSimExchange::LimitBuy(double dLimit, double dUsdt, double dLeverage)
+{
+	if(!(dUsdt > 0))
+		return _Reject("invalid amount", OrderType::Limit);
+	if(!(dLeverage >= 1))
+		return _Reject("invalid leverage", OrderType::Limit);
+
+	const double dQty = (dLimit > 0) ? _BuyQty(dLimit, dUsdt, dLeverage) : 0;
+	const std::string strError = _CheckLimit(OrderSide::Buy, dLimit, dQty);
+	if(!strError.empty())
+		return _Reject(strError, OrderType::Limit);
+
+	const double dReserved = dQty * dLimit / dLeverage + dQty * dLimit * rules.dFeeMaker;
+	if(dReserved > account.dAvailable + 1e-9)
+		return _Reject("insufficient available margin", OrderType::Limit);
+
+	LimitOrder order;
+	order.nId       = nNextOrderId++;
+	order.eSide     = OrderSide::Buy;
+	order.dPrice    = dLimit;
+	order.dUsdt     = dUsdt;
+	order.dLeverage = dLeverage;
+	order.dQty      = dQty;
+	order.dReserved = dReserved;
+	order.nTime     = nTime;
+	vOrders.push_back(order);
+	nOrdersVersion++;
+	stats.nLimitOrders++;
+	_Update();
+
+	OrderResult r;
+	r.bOk      = true;
+	r.dQty     = dQty;
+	r.eType    = OrderType::Limit;
+	r.dFeeRate = rules.dFeeMaker;
+	r.nOrderId = order.nId;
+	_LogOrder("LIMIT_BUY", r, dLimit);
+	return r;
+}
+
+OrderResult CSimExchange::LimitClose(double dLimit)
+{
+	if(!position.bOpen)
+		return _Reject("no open position", OrderType::Limit);
+	if(std::any_of(vOrders.begin(), vOrders.end(), [](const LimitOrder& o){ return o.eSide == OrderSide::Close; }))
+		return _Reject("a close limit is already open: move it or cancel it", OrderType::Limit);
+
+	const std::string strError = _CheckLimit(OrderSide::Close, dLimit, position.dQty);
+	if(!strError.empty())
+		return _Reject(strError, OrderType::Limit);
+
+	LimitOrder order;
+	order.nId    = nNextOrderId++;
+	order.eSide  = OrderSide::Close;
+	order.dPrice = dLimit;
+	order.dQty   = position.dQty;
+	order.nTime  = nTime;
+	vOrders.push_back(order);
+	nOrdersVersion++;
+	stats.nLimitOrders++;
+
+	OrderResult r;
+	r.bOk      = true;
+	r.dQty     = position.dQty;
+	r.eType    = OrderType::Limit;
+	r.dFeeRate = rules.dFeeMaker;
+	r.nOrderId = order.nId;
+	_LogOrder("LIMIT_CLOSE", r, dLimit);
+	return r;
+}
+
+OrderResult CSimExchange::Move(long long nOrderId, double dLimit)
+{
+	const auto it = std::find_if(vOrders.begin(), vOrders.end(), [&](const LimitOrder& o){ return o.nId == nOrderId; });
+	if(it == vOrders.end())
+		return _Reject("order " + std::to_string(nOrderId) + " not open", OrderType::Limit);
+
+	LimitOrder moved = *it;
+	moved.dPrice = dLimit;
+	if(moved.eSide == OrderSide::Buy)
+	{
+		moved.dQty      = (dLimit > 0) ? _BuyQty(dLimit, moved.dUsdt, moved.dLeverage) : 0;
+		moved.dReserved = moved.dQty * dLimit / moved.dLeverage + moved.dQty * dLimit * rules.dFeeMaker;
+	}
+	const std::string strError = _CheckLimit(moved.eSide, dLimit, moved.dQty);
+	if(!strError.empty())
+		return _Reject(strError, OrderType::Limit);
+	if(moved.dReserved - it->dReserved > account.dAvailable + 1e-9)
+		return _Reject("insufficient available margin", OrderType::Limit);
+
+	*it = moved;
+	nOrdersVersion++;
+	_Update();
+
+	OrderResult r;
+	r.bOk      = true;
+	r.dQty     = moved.eSide == OrderSide::Buy ? moved.dQty : position.dQty;
+	r.eType    = OrderType::Limit;
+	r.dFeeRate = rules.dFeeMaker;
+	r.nOrderId = nOrderId;
+	_LogOrder("MOVE", r, dLimit);
+	return r;
+}
+
+bool CSimExchange::Cancel(long long nOrderId)
+{
+	for(size_t i = 0; i < vOrders.size(); i++)
+		if(vOrders[i].nId == nOrderId)
+		{
+			_Remove(i, "cancelled by the strategy");
+			_Update();
+			return true;
+		}
+	return false;
+}
+
+void CSimExchange::CancelAll()
+{
+	while(!vOrders.empty())
+		_Remove(vOrders.size() - 1, "cancelled by the strategy");
+	_Update();
+}
+
+void CSimExchange::_Remove(size_t nIndex, const std::string& strReason)
+{
+	const LimitOrder order = vOrders[nIndex];
+	vOrders.erase(vOrders.begin() + static_cast<long>(nIndex));
+	nOrdersVersion++;
+	stats.nCancelled++;
+
+	OrderResult r;
+	r.eType    = OrderType::Limit;
+	r.nOrderId = order.nId;
+	r.strError = strReason;
+	_LogOrder("CANCEL", r, order.dPrice);
+}
+
+void CSimExchange::_CancelCloseOrders(const std::string& strReason)
+{
+	for(size_t i = vOrders.size(); i-- > 0; )
+		if(vOrders[i].eSide == OrderSide::Close)
+			_Remove(i, strReason);
+}
+
+bool CSimExchange::_Triggered(const LimitOrder& order) const
+{
+	if(order.eSide == OrderSide::Buy)
+		return bLimitThrough ? (dLimitTick > 0 ? dPrice <= order.dPrice * (1.0 - dLimitTick) : dPrice < order.dPrice)
+		                     : dPrice <= order.dPrice;
+	return bLimitThrough ? (dLimitTick > 0 ? dPrice >= order.dPrice * (1.0 + dLimitTick) : dPrice > order.dPrice)
+	                     : dPrice >= order.dPrice;
+}
+
+void CSimExchange::_CheckOrders()
+{
+	for(size_t i = 0; i < vOrders.size(); )
+	{
+		const LimitOrder order = vOrders[i];
+		if(!_Triggered(order) || (order.eSide == OrderSide::Close && !position.bOpen))
+		{
+			++i;
+			continue;
+		}
+		vOrders.erase(vOrders.begin() + static_cast<long>(i));
+		nOrdersVersion++;
+		const double dWalletBefore = account.dWallet;
+
+		OrderResult r;
+		if(order.eSide == OrderSide::Buy)
+		{
+			_Update();
+			const double dNeeded = order.dQty * order.dPrice / order.dLeverage + order.dQty * order.dPrice * rules.dFeeMaker;
+			if(dNeeded > account.dAvailable + 1e-9)
+			{
+				stats.nCancelled++;
+				OrderResult rejected;
+				rejected.eType    = OrderType::Limit;
+				rejected.nOrderId = order.nId;
+				rejected.strError = "insufficient margin at fill: order cancelled";
+				_LogOrder("CANCEL", rejected, order.dPrice);
+				continue;
+			}
+			r = _ApplyBuy(order.dQty, order.dPrice, order.dLeverage, rules.dFeeMaker, OrderType::Limit);
+			r.nOrderId = order.nId;
+			_LogOrder("FILL_BUY", r, order.dPrice);
+		}
+		else
+		{
+			r = _ApplyClose(order.dPrice, rules.dFeeMaker, OrderType::Limit);
+			r.nOrderId = order.nId;
+			_LogOrder("FILL_CLOSE", r, order.dPrice);
+			_CancelCloseOrders("position closed");
+		}
+		stats.nLimitFills++;
+		stats.dMakerFees += r.dFee;
+
+		Fill fill;
+		fill.nOrderId = order.nId;
+		fill.eSide    = order.eSide;
+		fill.eType    = OrderType::Limit;
+		fill.nTime    = nTime;
+		fill.dPrice   = r.dFillPrice;
+		fill.dQty     = r.dQty;
+		fill.dFee     = r.dFee;
+		fill.dFeeRate = r.dFeeRate;
+		fill.dWalletBefore = dWalletBefore;
+		vFills.push_back(fill);
+		i = 0;
+	}
+	_Update();
+}
+
+std::vector<Fill> CSimExchange::TakeFills()
+{
+	std::vector<Fill> vTaken;
+	vTaken.swap(vFills);
+	return vTaken;
 }

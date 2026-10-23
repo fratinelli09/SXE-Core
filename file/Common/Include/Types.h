@@ -43,6 +43,18 @@ struct Position
 	double dFundingPaid      = 0;
 };
 
+enum class OrderType
+{
+	Market,
+	Limit
+};
+
+enum class OrderSide
+{
+	Buy,
+	Close
+};
+
 struct OrderResult
 {
 	bool        bOk        = false;
@@ -50,12 +62,41 @@ struct OrderResult
 	double      dQty       = 0;
 	double      dFee       = 0;
 	std::string strError;
+	OrderType   eType      = OrderType::Market;
+	double      dFeeRate   = 0;
+	long long   nOrderId   = 0;
+};
+
+struct LimitOrder
+{
+	long long nId       = 0;
+	OrderSide eSide     = OrderSide::Buy;
+	double    dPrice    = 0;
+	double    dUsdt     = 0;
+	double    dLeverage = 0;
+	double    dQty      = 0;
+	double    dReserved = 0;
+	long long nTime     = 0;
+};
+
+struct Fill
+{
+	long long nOrderId = 0;
+	OrderSide eSide    = OrderSide::Buy;
+	OrderType eType    = OrderType::Limit;
+	long long nTime    = 0;
+	double    dPrice   = 0;
+	double    dQty     = 0;
+	double    dFee     = 0;
+	double    dFeeRate = 0;
+	double    dWalletBefore = 0;
 };
 
 struct ExchangeRules
 {
 	MarginMode eMarginMode        = MarginMode::Isolated;
 	double     dFeeTaker          = 0;
+	double     dFeeMaker          = 0;
 	double     dSlippage          = 0;
 	double     dMaintenanceMargin = 0;
 	double     dQtyStep           = 0;

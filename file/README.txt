@@ -17,8 +17,8 @@ Engine/                 -> libEngine.so
 
 Exchange/               -> libExchange.so
     IExchange: the exchange as seen by the engine.
-    CSimExchange: simulated exchange (market orders, fees, slippage, margin, tiered maintenance
-    margin, funding every 8 hours, liquidation).
+    CSimExchange: simulated exchange (market and limit orders, taker and maker fees, slippage,
+    margin, tiered maintenance margin, funding every 8 hours, liquidation).
 
 DataFeed/               -> libDataFeed.so
     IDataFeed: where prices come from.
@@ -30,7 +30,7 @@ Settings/               -> libSettings.so
 
 Common/                 -> libCommon.so
     Logger (log.txt, error.txt), ThreadBase, TimeUtils (dates),
-    Types.h (Candle, Account, Position, OrderResult, ExchangeRules).
+    Types.h (Candle, Account, Position, OrderResult, LimitOrder, Fill, ExchangeRules).
 
 SDK/                    (headers only)
     Boundary between engine and strategy: CStrategyBase (GetInfo, LoadConfig, Init, Run, Term),

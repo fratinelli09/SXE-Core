@@ -26,7 +26,7 @@ CEngine::CEngine():
 	logger(Logger::Get()),
 	pStrategy(nullptr),
 	orderRouter(*this),
-	ctx{0, 0, 0, 0, Candle(), false, Account(), Position(), false, orderRouter, Logger::Get()},
+	ctx{0, 0, 0, 0, Candle(), false, Account(), Position(), false, {}, {}, orderRouter, Logger::Get()},
 	step(),
 	bConsole(false),
 	dInitialCapital(0),
@@ -40,6 +40,7 @@ CEngine::CEngine():
 	bLiquidation(true),
 	bUnderwater(false),
 	nUnderwater(0),
+	nOrdersVersion(-1),
 	nExitCode(0),
 	nStartStep(0),
 	dPeakEquity(0),
@@ -118,6 +119,7 @@ bool CEngine::Setup(const CSettings& settings)
 	ExchangeRules rules;
 	rules.eMarginMode        = (settings.exchange.strMarginMode == CFG_MARGIN_CROSSED) ? MarginMode::Crossed : MarginMode::Isolated;
 	rules.dFeeTaker          = settings.exchange.dFeeTaker;
+	rules.dFeeMaker          = settings.exchange.dFeeMaker;
 	rules.dSlippage          = settings.exchange.dSlippage;
 	rules.dMaintenanceMargin = settings.exchange.dMaintenanceMargin;
 	rules.dQtyStep           = settings.exchange.dQtyStep;
@@ -134,6 +136,7 @@ bool CEngine::Setup(const CSettings& settings)
 	pExchange = std::make_unique<CSimExchange>(rules, dInitialCapital);
 	pExchange->SetSimRules(settings.sim.nLiquidation != 0, settings.sim.dFundingRate, settings.sim.dFundingMultiplier);
 	pExchange->SetMaintenanceTiers(settings.exchange.vMaintenanceTiers);
+	pExchange->SetLimitRules(settings.sim.strLimitFill == CFG_LIMIT_FILL_THROUGH, settings.sim.dTickStep);
 
 	std::string strError;
 	if(!pExchange->LoadFunding(settings.sim.strFundingFile, strError))
@@ -141,6 +144,11 @@ bool CEngine::Setup(const CSettings& settings)
 		logger.Error(strError);
 		return false;
 	}
+	logger.Info("Simulated exchange: fee taker " + Num(settings.exchange.dFeeTaker * 100, 4) + "% (market orders), maker " +
+	            Num(settings.exchange.dFeeMaker * 100, 4) + "% (limit orders, filled " +
+	            (settings.sim.strLimitFill == CFG_LIMIT_FILL_THROUGH
+	                 ? "when the price goes through the limit by " + Num(settings.sim.dTickStep * 100, 2) + "%"
+	                 : std::string("when the price touches the limit")) + ")");
 	logger.Info("Simulated exchange: margin " + settings.exchange.strMarginMode + ", liquidation " +
 	            (settings.sim.nLiquidation ? "on" : "off") + ", funding " +
 	            (pExchange->FundingCount() ? "from history (" + std::to_string(pExchange->FundingCount()) + " values), elsewhere " : std::string()) +
@@ -287,6 +295,9 @@ void CEngine::run()
 		pExchange->ApplyFunding(step.nCandleTime, step.dPrice);
 
 	pExchange->Refresh(step.nTime, step.dPrice);
+	ctx.vFills = pExchange->TakeFills();
+	for(const Fill& fill : ctx.vFills)
+		_OnFill(fill);
 
 	ctx.nStep++;
 	ctx.nTime         = step.nTime;
@@ -362,6 +373,33 @@ void CEngine::_OnLiquidation()
 	bSaveNow = true;
 }
 
+void CEngine::_OnFill(const Fill& fill)
+{
+	if(fill.eSide == OrderSide::Buy)
+	{
+		if(pendingClose.bPending)
+			_ArchiveCycle();
+		OrderResult r;
+		r.bOk        = true;
+		r.dFillPrice = fill.dPrice;
+		r.dQty       = fill.dQty;
+		r.dFee       = fill.dFee;
+		r.eType      = fill.eType;
+		r.dFeeRate   = fill.dFeeRate;
+		r.nOrderId   = fill.nOrderId;
+		archive.OnBuy(fill.nTime, r, fill.dWalletBefore);
+	}
+	else
+	{
+		pendingClose.bPending       = true;
+		pendingClose.dExitPrice     = fill.dPrice;
+		pendingClose.dFee           = fill.dFee;
+		pendingClose.positionBefore = pExchange->GetLastClosed();
+		pendingClose.strReason      = "limit";
+	}
+	bSaveNow = true;
+}
+
 void CEngine::_ArchiveCycle()
 {
 	pendingClose.bPending = false;
@@ -404,6 +442,11 @@ void CEngine::_UpdateContext()
 {
 	ctx.account  = pExchange->GetAccount();
 	ctx.position = pExchange->GetPosition();
+	if(pExchange->OrdersVersion() != nOrdersVersion)
+	{
+		ctx.vOpenOrders = pExchange->GetOpenOrders();
+		nOrdersVersion  = pExchange->OrdersVersion();
+	}
 }
 
 void CEngine::_PrintStatus(bool bForce)
@@ -447,7 +490,10 @@ void CEngine::_Finish(bool bError, const std::string& strReason)
 		", closed cycles " + std::to_string(stats.nClosed) + " (in profit " + std::to_string(stats.nWins) + ")" +
 		", liquidations " + std::to_string(stats.nLiquidations) +
 		", orders " + std::to_string(stats.nOrders) + ", rejected " + std::to_string(stats.nRejected) +
-		", fees " + Num(stats.dFeesPaid) + " USDT, funding " + Num(stats.dFundingPaid) + " USDT" +
+		", fees " + Num(stats.dFeesPaid) + " USDT" +
+		(stats.nLimitOrders > 0 ? " (maker " + Num(stats.dMakerFees) + " USDT on " + std::to_string(stats.nLimitFills) +
+		                          " limit fills, taker " + Num(stats.dFeesPaid - stats.dMakerFees) + " USDT)" : std::string()) +
+		", funding " + Num(stats.dFundingPaid) + " USDT" +
 		(nUnderwater > 0 ? ", cycles with equity below zero " + std::to_string(nUnderwater) +
 		                   " (" CFG_SIM_LIQUIDATION " = 0: result not realistic)" : std::string()) +
 		(pExchange->GetPosition().bOpen ? (bArchiveOpenCycle ? ", last cycle still open (archived)"
@@ -503,4 +549,47 @@ OrderResult CEngine::COrderRouter::Close()
 	}
 	engine._UpdateContext();
 	return r;
+}
+
+OrderResult CEngine::COrderRouter::LimitBuy(double dPrice, double dUsdt, double dLeverage)
+{
+	const OrderResult r = engine.pExchange->LimitBuy(dPrice, dUsdt, dLeverage);
+	if(r.bOk)
+		engine.bSaveNow = true;
+	engine._UpdateContext();
+	return r;
+}
+
+OrderResult CEngine::COrderRouter::LimitClose(double dPrice)
+{
+	const OrderResult r = engine.pExchange->LimitClose(dPrice);
+	if(r.bOk)
+		engine.bSaveNow = true;
+	engine._UpdateContext();
+	return r;
+}
+
+OrderResult CEngine::COrderRouter::Move(long long nOrderId, double dPrice)
+{
+	const OrderResult r = engine.pExchange->Move(nOrderId, dPrice);
+	if(r.bOk)
+		engine.bSaveNow = true;
+	engine._UpdateContext();
+	return r;
+}
+
+bool CEngine::COrderRouter::Cancel(long long nOrderId)
+{
+	const bool bOk = engine.pExchange->Cancel(nOrderId);
+	if(bOk)
+		engine.bSaveNow = true;
+	engine._UpdateContext();
+	return bOk;
+}
+
+void CEngine::COrderRouter::CancelAll()
+{
+	engine.pExchange->CancelAll();
+	engine.bSaveNow = true;
+	engine._UpdateContext();
 }

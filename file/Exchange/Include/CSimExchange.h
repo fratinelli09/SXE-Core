@@ -18,6 +18,10 @@ public:
 		double    dFeesPaid     = 0;
 		double    dFundingPaid  = 0;
 		double    dRealizedPnL  = 0;
+		long long nLimitOrders  = 0;
+		long long nLimitFills   = 0;
+		long long nCancelled    = 0;
+		double    dMakerFees    = 0;
 	};
 
 	struct Liquidation
@@ -35,12 +39,15 @@ public:
 		Position  position;
 		long long nFundingSlot  = -1;
 		Stats     stats;
+		std::vector<LimitOrder> vOrders;
+		long long nNextOrderId  = 1;
 	};
 
 public:
 	CSimExchange(const ExchangeRules& rules, double dInitialCapital);
 
 	void SetSimRules(bool bLiquidation, double dFundingRate, double dFundingMultiplier);
+	void SetLimitRules(bool bThrough, double dTickStep);
 	void SetMaintenanceTiers(const std::vector<std::pair<double, double>>& vTiers);
 	double MaintenanceMargin(double dNotional) const;
 	bool LoadFunding(const std::string& strFile, std::string& strError);
@@ -60,8 +67,19 @@ public:
 	OrderResult MarketBuy(double dUsdt, double dLeverage) override;
 	OrderResult Close() override;
 
+	OrderResult LimitBuy(double dPrice, double dUsdt, double dLeverage) override;
+	OrderResult LimitClose(double dPrice) override;
+	OrderResult Move(long long nOrderId, double dPrice) override;
+	bool Cancel(long long nOrderId) override;
+	void CancelAll() override;
+
+	const std::vector<LimitOrder>& GetOpenOrders() const override { return vOrders; }
+	std::vector<Fill> TakeFills() override;
+
 	const Stats& GetStats() const { return stats; }
 	const Liquidation& GetLastLiquidation() const { return lastLiquidation; }
+	const Position& GetLastClosed() const { return lastClosed; }
+	long long OrdersVersion() const { return nOrdersVersion; }
 
 	Snapshot GetSnapshot() const;
 	void Restore(const Snapshot& snapshot);
@@ -72,8 +90,17 @@ private:
 	double _LiquidationPrice() const;
 	double _FundingRate(long long nSlot) const;
 	void _Liquidate();
-	OrderResult _Reject(const std::string& strError);
-	void _LogOrder(const char* pszType, const OrderResult& r);
+	OrderResult _Reject(const std::string& strError, OrderType eType = OrderType::Market);
+	void _LogOrder(const char* pszType, const OrderResult& r, double dLimitPrice = 0);
+	OrderResult _ApplyBuy(double dQty, double dFill, double dLeverage, double dFeeRate, OrderType eType);
+	OrderResult _ApplyClose(double dFill, double dFeeRate, OrderType eType);
+	void _CheckOrders();
+	bool _Triggered(const LimitOrder& order) const;
+	double _Reserved() const;
+	double _BuyQty(double dPrice, double dUsdt, double dLeverage) const;
+	std::string _CheckLimit(OrderSide eSide, double dLimit, double dQty) const;
+	void _Remove(size_t nIndex, const std::string& strReason);
+	void _CancelCloseOrders(const std::string& strReason);
 
 private:
 	ExchangeRules rules;
@@ -81,6 +108,7 @@ private:
 	Position      position;
 	Stats         stats;
 	Liquidation   lastLiquidation;
+	Position      lastClosed;
 
 	bool          bLiquidation;
 	double        dFundingRate;
@@ -92,6 +120,13 @@ private:
 
 	long long     nTime;
 	double        dPrice;
+
+	bool          bLimitThrough;
+	double        dLimitTick;
+	std::vector<LimitOrder> vOrders;
+	std::vector<Fill> vFills;
+	long long     nNextOrderId;
+	long long     nOrdersVersion;
 
 	std::string   strOrderLog;
 };

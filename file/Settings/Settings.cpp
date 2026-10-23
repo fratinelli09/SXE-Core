@@ -157,6 +157,7 @@ bool CSettings::Load(const std::string& strConfigFile, const std::string& strBas
                   "' is not valid (allowed values: " CFG_MARGIN_CROSSED ", " CFG_MARGIN_ISOLATED ")");
 
     _Optional(ini, CFG_EXCHANGE_SECTION, CFG_EXCHANGE_FEE_TAKER, exchange.dFeeTaker);
+    _Optional(ini, CFG_EXCHANGE_SECTION, CFG_EXCHANGE_FEE_MAKER, exchange.dFeeMaker);
     _Optional(ini, CFG_EXCHANGE_SECTION, CFG_EXCHANGE_SLIPPAGE, exchange.dSlippage);
     std::string strTiers = "200000:0.004, 1000000:0.005, 5000000:0.007, 15000000:0.01, 50000000:0.02, "
                            "100000000:0.03, 150000000:0.06, 300000000:0.12, 500000000:0.15, "
@@ -173,6 +174,7 @@ bool CSettings::Load(const std::string& strConfigFile, const std::string& strBas
     _Optional(ini, CFG_EXCHANGE_SECTION, CFG_EXCHANGE_MIN_NOTIONAL, exchange.dMinNotional);
 
     _CheckRange(CFG_EXCHANGE_SECTION, CFG_EXCHANGE_FEE_TAKER, exchange.dFeeTaker, 0, 0.1);
+    _CheckRange(CFG_EXCHANGE_SECTION, CFG_EXCHANGE_FEE_MAKER, exchange.dFeeMaker, 0, 0.1);
     _CheckRange(CFG_EXCHANGE_SECTION, CFG_EXCHANGE_SLIPPAGE, exchange.dSlippage, 0, 0.1);
     _CheckRange(CFG_EXCHANGE_SECTION, CFG_EXCHANGE_QTY_STEP, exchange.dQtyStep, 0, 1e9);
     _CheckRange(CFG_EXCHANGE_SECTION, CFG_EXCHANGE_MIN_QTY, exchange.dMinQty, 0, 1e9);
@@ -201,6 +203,7 @@ bool CSettings::Load(const std::string& strConfigFile, const std::string& strBas
         _Optional(ini, CFG_SIM_SECTION, CFG_SIM_INTRABAR, sim.nIntrabar);
         _Optional(ini, CFG_SIM_SECTION, CFG_SIM_TICK_STEP, sim.dTickStep);
         _Optional(ini, CFG_SIM_SECTION, CFG_SIM_LIQUIDATION, sim.nLiquidation);
+        _Optional(ini, CFG_SIM_SECTION, CFG_SIM_LIMIT_FILL, sim.strLimitFill);
         _Optional(ini, CFG_SIM_SECTION, CFG_SIM_SAVE_EVERY, sim.nSaveEvery);
 
         if (sim.strStateFile.empty())
@@ -215,6 +218,9 @@ bool CSettings::Load(const std::string& strConfigFile, const std::string& strBas
         _CheckRange(CFG_SIM_SECTION, CFG_SIM_INTRABAR, sim.nIntrabar, 0, 3);
         _CheckRange(CFG_SIM_SECTION, CFG_SIM_SAVE_EVERY, sim.nSaveEvery, 1, 1000000);
         _CheckFlag(CFG_SIM_SECTION, CFG_SIM_LIQUIDATION, sim.nLiquidation);
+        if (sim.strLimitFill != CFG_LIMIT_FILL_THROUGH && sim.strLimitFill != CFG_LIMIT_FILL_TOUCH)
+            _AddError(Key(CFG_SIM_SECTION, CFG_SIM_LIMIT_FILL) + " = '" + sim.strLimitFill +
+                      "' is not valid (allowed values: " CFG_LIMIT_FILL_THROUGH ", " CFG_LIMIT_FILL_TOUCH ")");
         _CheckRange(CFG_SIM_SECTION, CFG_SIM_FUNDING_RATE, sim.dFundingRate, -0.1, 0.1);
         _CheckRange(CFG_SIM_SECTION, CFG_SIM_FUNDING_MULTIPLIER, sim.dFundingMultiplier, 0, 10);
         _CheckRange(CFG_SIM_SECTION, CFG_SIM_TICK_STEP, sim.dTickStep, 0, 1);

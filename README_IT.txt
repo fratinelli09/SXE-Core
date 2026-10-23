@@ -7,10 +7,10 @@ realistico dei futures perpetui con margine in USDT.
 La strategia e' compilata come libreria separata (.so) e non sa da dove arrivano i prezzi.
 Il motore la carica all'avvio, ne controlla l'interfaccia, le passa i dati del mercato passo
 dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le regole di uno
-vero: commissioni, slippage, margine isolated/crossed, margine di mantenimento a scaglioni,
-funding ogni 8 ore e liquidazione.
+vero: ordini a mercato e limite, commissioni taker e maker, slippage, margine
+isolated/crossed, margine di mantenimento a scaglioni, funding ogni 8 ore e liquidazione.
 
-Versione 1.0.1 - modifiche in CHANGELOG.txt (in inglese)
+Versione 1.1.0 - modifiche in CHANGELOG.txt (in inglese)
 English version: README.txt
 
 
@@ -29,8 +29,10 @@ PUNTI DI FORZA
 
 * Simulazione realistica dei futures (sul modello di Bitget BTCUSDT perpetuo, tutto
   configurabile)
-  - commissione taker e slippage su ogni esecuzione, passo della quantita', quantita' minima,
-    valore minimo dell'ordine
+  - ordini a mercato con commissione taker e slippage; ordini limite (acquisto, chiusura)
+    con commissione maker e senza slippage, eseguiti al loro prezzo quando il mercato li
+    supera di un tick (o appena li tocca), con il margine degli acquisti aperti prenotato
+  - passo della quantita', quantita' minima, valore minimo dell'ordine
   - margine isolated o crossed
   - margine di mantenimento a scaglioni progressivi (ogni fascia della posizione paga il tasso
     del suo scaglione) e calcolo del prezzo di liquidazione scaglione per scaglione
@@ -65,7 +67,7 @@ PUNTI DI FORZA
   dentro la candela girano in 0,2 secondi.
 
 * Testato
-  13 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024).
+  17 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a mano.
 
 
 COME FUNZIONA
@@ -103,8 +105,17 @@ La strategia implementa cinque metodi, chiamati in quest'ordine:
 
 Run() esegue un passo e ritorna: il ciclo e' del motore. La strategia non legge l'orologio,
 non usa la rete e non parla direttamente con l'exchange. Tempo, prezzi, conto e posizione
-arrivano nel contesto; gli ordini passano da ctx.orders.MarketBuy(usdt, leva) e
-ctx.orders.Close(), che sono sincroni.
+arrivano nel contesto; gli ordini passano da ctx.orders, in modo sincrono:
+
+    MarketBuy(usdt, leva)             acquisto a mercato (commissione taker, slippage)
+    Close()                           chiude tutta la posizione a mercato
+    LimitBuy(prezzo, usdt, leva)      acquisto limite sotto il mercato (commissione maker)
+    LimitClose(prezzo)                chiusura limite di tutta la posizione sopra il mercato
+    Move(id, prezzo), Cancel(id), CancelAll()
+
+Ogni esito dice il tipo di ordine (mercato o limite), il tasso di commissione e l'id
+dell'ordine. Gli ordini limite aperti sono in ctx.vOpenOrders, quelli eseguiti dal passo
+precedente in ctx.vFills. Alla liquidazione l'exchange cancella tutti gli ordini aperti.
 
 
 AVVIO RAPIDO
@@ -200,11 +211,11 @@ Target/Config/EngineConfig.ini, ogni chiave e' commentata nel file:
     [ENGINE]       modalita' (SIM), simbolo
     [STRATEGY]     libreria della strategia e suo file di configurazione
     [PATH]         cartelle Log, Backup e dati storici
-    [EXCHANGE]     modalita' di margine, commissione taker, slippage, scaglioni del margine di
-                   mantenimento, passo della quantita', valore minimo dell'ordine
+    [EXCHANGE]     modalita' di margine, commissioni taker e maker, slippage, scaglioni del
+                   margine di mantenimento, passo della quantita', valore minimo dell'ordine
     [SIMULATION]   periodo, capitale iniziale, file dei prezzi e del funding, funding di
-                   riserva e moltiplicatore, percorso dentro la candela, liquidazione si'/no,
-                   ripresa, file di stato e degli ordini
+                   riserva e moltiplicatore, percorso dentro la candela, quando si esegue un
+                   ordine limite, liquidazione si'/no, ripresa, file di stato e degli ordini
     [LOG]          messaggi info / warning / error / riga sul terminale
 
 
@@ -212,7 +223,8 @@ RISULTATI
 ---------
 
     Target/Log/                        file del ciclo in corso: log.txt, error.txt, registro
-                                       degli ordini, file della strategia, stato della
+                                       degli ordini (tipo, prezzo, commissione e tasso di
+                                       ogni ordine), file della strategia, stato della
                                        simulazione
     Target/Backup/b<N>/                una cartella per ciclo chiuso: result.txt
                                        (apertura/chiusura, prezzi, crescita, drawdown, leva
@@ -224,8 +236,8 @@ RISULTATI
 TEST
 ----
 
-./comp_All.sh test lancia 13 test su dati reali fissi (file/Tests/Data: BTCUSDT 1h e funding,
-2023-2024):
+./comp_All.sh test lancia 17 test su dati reali fissi (file/Tests/Data: BTCUSDT 1h e funding,
+2023-2024) e su poche candele costruite a mano:
 
     loader_not_strategy     il motore rifiuta una libreria che non e' una strategia,
     loader_old_api          compilata con un'altra versione dell'interfaccia,
@@ -238,10 +250,17 @@ TEST
     golden_high_first       percorso estremo dentro la candela: prima il massimo
     golden_bitget           parametri reali dell'exchange: margine a scaglioni, slippage
                             basso, moltiplicatore del funding
+    golden_limit            acquisto limite e chiusura limite, la chiusura spostata quando
+                            cambia il prezzo medio
     no_liquidation_warning  con liquidation = 0 il motore avvisa quando l'equity va sotto
                             zero: il risultato non e' realistico
     resume                  una corsa fermata a meta' candela e ripresa da' gli stessi cicli
                             di una senza interruzioni
+    resume_limit            lo stesso con ordini limite aperti
+    limit_through           candele costruite a mano: un limite solo toccato non viene
+                            eseguito, uno superato di un tick si' al suo prezzo con la
+                            commissione maker
+    limit_touch             lo stesso con limit_fill = touch: eseguito appena toccato
     benchmark               passi al secondo (solo misura)
 
 I test golden confrontano ogni ciclo con i riferimenti in file/Tests/Golden: qualsiasi
@@ -276,8 +295,8 @@ LIMITI DELLA VERSIONE PUBBLICA
 
 * Solo simulazione: mode = REAL e' riservato al trading reale, che non fa parte di questa
   versione.
-* Posizioni long con ordini a mercato (apertura/aumento, chiusura completa), un simbolo per
-  avvio.
+* Posizioni long con ordini a mercato e limite (apertura/aumento, chiusura completa), un
+  simbolo per avvio.
 * Solo Linux (le strategie vengono caricate con dlopen).
 
 
@@ -296,11 +315,6 @@ sono elencate qui sotto.
         riepilogo da controllare prima di partire; vincoli, classifica e il .ini migliore
         pronto per SXE; verifica dei migliori su periodi non usati per il tuning.
         Prossimo passo: robustezza delle combinazioni vicine e stress con costi piu' alti.
-
-    Ordini limite                                                          in sviluppo
-        Ordini limite accanto a quelli a mercato: piazzati, spostati e cancellati dalla
-        strategia, eseguiti quando il prezzo li raggiunge, con la commissione maker invece
-        della taker e senza slippage; registro ordini e risultati mostrano tipo e commissione.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e
