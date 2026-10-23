@@ -287,8 +287,10 @@ below.
         on all cores; each run is written to a CSV file as soon as it ends, with return,
         drawdown, cycles, liquidations, fees and funding. Any strategy can be tuned: the
         parameters are the keys of its .ini.
-        Next: random search for large grids, constraints (maximum drawdown, no
-        liquidations, minimum cycles) and ranking of the results.
+        In progress: rules between parameters (for example percentages that must add up to
+        100), a dry run that checks every value with the strategy before the first
+        simulation, random search for large grids, constraints on the results (maximum
+        drawdown, no liquidations, minimum cycles), ranking and the best .ini ready to use.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)

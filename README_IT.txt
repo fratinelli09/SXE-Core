@@ -301,8 +301,11 @@ sono elencate qui sotto.
         combinazioni (ricerca a griglia) su tutti i core; ogni corsa e' scritta in un file
         CSV appena finisce, con rendimento, drawdown, cicli, liquidazioni, commissioni e
         funding. Funziona con qualunque strategia: i parametri sono le chiavi del suo .ini.
-        Prossimo passo: ricerca casuale per le griglie grandi, vincoli (drawdown massimo,
-        nessuna liquidazione, cicli minimi) e classifica dei risultati.
+        In corso: regole tra i parametri (per esempio percentuali che devono sommare a 100),
+        prova a vuoto che controlla ogni valore con la strategia prima della prima
+        simulazione, ricerca casuale per le griglie grandi, vincoli sui risultati (drawdown
+        massimo, nessuna liquidazione, cicli minimi), classifica e il .ini migliore pronto
+        da usare.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e
