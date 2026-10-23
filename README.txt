@@ -294,6 +294,10 @@ below.
         random search for large grids (repeatable with a seed), constraints on the results
         (maximum drawdown, no liquidations, minimum cycles, maximum leverage), ranking by
         return, return/drawdown or drawdown, and the best .ini ready to use with SXE.
+        In progress: zoom search, an option next to the full grid. A first pass spread
+        over the whole space, then passes on the neighbourhoods of the best results, each
+        one narrower, until no neighbour is left to try: a few thousand runs instead of
+        all the combinations.
         Next: check of the best results on a period not used for the tuning, robustness
         (how the neighbouring combinations perform) and stress with higher funding and
         slippage.

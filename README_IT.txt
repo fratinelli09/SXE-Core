@@ -309,6 +309,10 @@ sono elencate qui sotto.
         sui risultati (drawdown massimo, nessuna liquidazione, cicli minimi, leva massima),
         classifica per rendimento, rendimento/drawdown o drawdown, e il .ini migliore pronto
         da usare con SXE.
+        In corso: ricerca a zoom, un'opzione accanto alla griglia completa. Una prima
+        passata sparsa su tutto lo spazio, poi passate sugli intorni dei risultati
+        migliori, ognuna piu' stretta, finche' non resta nessun vicino da provare: qualche
+        migliaio di corse invece di tutte le combinazioni.
         Prossimo passo: verifica dei migliori su un periodo non usato per il tuning,
         robustezza (come vanno le combinazioni vicine) e stress con funding e slippage piu'
         alti.
