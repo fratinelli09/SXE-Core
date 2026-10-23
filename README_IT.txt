@@ -289,42 +289,13 @@ Le funzionalita' del motore sviluppate dopo fanno parte della versione privata d
 sono elencate qui sotto.
 
     Tuning dei parametri                                                   in sviluppo
-        Ottimizzazione dei parametri della strategia con piu' avvii: tante simulazioni in
-        parallelo sugli stessi dati, classifica per rendimento, drawdown e liquidazioni,
-        verifica su un periodo non usato per il tuning. Programma separato: SXE continua a
-        funzionare da solo anche senza.
-        Fatto: piu' motori indipendenti nello stesso processo, in parallelo su tutti i core,
-        con i dati di mercato letti una volta sola; corse leggere senza i file dei cicli,
-        circa 10 volte piu' veloci di una corsa completa, con risultati identici al centesimo.
-        Fatto: il programma SXE_Tune. Optimize.ini elenca i parametri della strategia da
-        far variare (intervalli, elenchi o valori fissi) e SXE_Tune prova tutte le
-        combinazioni (ricerca a griglia) su tutti i core; ogni corsa e' scritta in un file
-        CSV appena finisce, con rendimento, drawdown, cicli, liquidazioni, commissioni e
-        funding. Funziona con qualunque strategia: i parametri sono le chiavi del suo .ini.
-        Fatto: regole tra i parametri scritte come formule con un nome, un piccolo
-        linguaggio in Optimize.ini (per esempio percentuali che devono sommare a 100, o una
-        grandezza ricavata dai parametri della strategia che deve stare sopra una soglia),
-        prova a vuoto che controlla ogni valore con la strategia prima della prima
-        simulazione, ricerca casuale per le griglie grandi (ripetibile con un seed), vincoli
-        sui risultati (drawdown massimo, nessuna liquidazione, cicli minimi, leva massima),
-        classifica per rendimento, rendimento/drawdown o drawdown, e il .ini migliore pronto
-        da usare con SXE.
-        Fatto: ricerca a zoom, un'opzione accanto alla griglia completa e alla ricerca
-        casuale. Una prima passata sparsa su tutto lo spazio, poi passate sugli intorni dei
-        risultati migliori, ognuna piu' stretta, finche' non resta nessun vicino dei
-        migliori da provare: in una prova circa l'1% delle combinazioni, con un risultato
-        migliore di una ricerca casuale con lo stesso numero di corse. Piu' tuning possono
-        girare insieme sulla stessa macchina.
-        Fatto: riepilogo di formule e regole prima di partire, con i valori che ognuna
-        legge, l'intervallo di ogni formula, quante combinazioni passa ogni regola ed esempi
-        con i numeri al posto dei nomi; il tuning aspetta una conferma prima di simulare.
-        Fatto: verifica dei migliori su uno o piu' periodi non usati per il tuning, scelti
-        in una sezione facoltativa di Optimize.ini (un errore li' spegne la verifica con un
-        avviso, il tuning va avanti): un risultato e' confermato se rispetta i vincoli con
-        rendimento positivo in ogni periodo, e un secondo .ini migliore viene scelto tra i
-        confermati in base al loro periodo peggiore.
-        Prossimo passo: robustezza (come vanno le combinazioni vicine) e stress con funding
-        e slippage piu' alti.
+        SXE_Tune, programma separato: fa girare in parallelo tante simulazioni della
+        stessa strategia con parametri diversi e le mette in classifica. SXE resta autonomo.
+        Fatto: ricerca a griglia, casuale e a zoom (prima larga, poi stretta sui migliori);
+        regole tra i parametri scritte come formule con un nome in Optimize.ini, con un
+        riepilogo da controllare prima di partire; vincoli, classifica e il .ini migliore
+        pronto per SXE; verifica dei migliori su periodi non usati per il tuning.
+        Prossimo passo: robustezza delle combinazioni vicine e stress con costi piu' alti.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e

@@ -276,40 +276,13 @@ Engine features developed afterwards belong to the author's private edition and 
 below.
 
     Parameter tuning                                                   in development
-        Multi-run optimisation of the strategy parameters: many simulations in parallel on
-        the same data, ranking by return, drawdown and liquidations, check on a period not
-        used for the tuning. Separate program: SXE keeps running on its own without it.
-        Done: many independent engines in one process, in parallel on all cores, sharing
-        the market data read once; light runs without per-cycle files, about 10 times
-        faster than a full run, with results identical to the cent.
-        Done: the SXE_Tune program. Optimize.ini lists the strategy parameters to vary
-        (ranges, lists or fixed values) and SXE_Tune runs every combination (grid search)
-        on all cores; each run is written to a CSV file as soon as it ends, with return,
-        drawdown, cycles, liquidations, fees and funding. Any strategy can be tuned: the
-        parameters are the keys of its .ini.
-        Done: rules between parameters written as formulas with names, a small language
-        in Optimize.ini (for example percentages that must add up to 100, or a derived
-        quantity of the strategy that must stay above a threshold),
-        a dry run that checks every value with the strategy before the first simulation,
-        random search for large grids (repeatable with a seed), constraints on the results
-        (maximum drawdown, no liquidations, minimum cycles, maximum leverage), ranking by
-        return, return/drawdown or drawdown, and the best .ini ready to use with SXE.
-        Done: zoom search, an option next to the full grid and the random search. A first
-        pass spread over the whole space, then passes on the neighbourhoods of the best
-        results, each one narrower, until no neighbour of the best is left to try: in a
-        test about 1% of the combinations, with a better result than a random search of
-        the same size. Several tuning sessions can run at the same time on one machine.
-        Done: a summary of formulas and rules before the start, with the values each one
-        reads, the range of every formula, how many combinations each rule lets through and
-        worked examples with the numbers in place of the names; the tuning waits for a
-        confirmation before simulating.
-        Done: check of the best results on one or more periods not used for the tuning,
-        set in an optional section of Optimize.ini (a mistake there turns the check off
-        with a warning, the tuning goes on): a result is confirmed when it respects the
-        constraints with a positive return in every period, and a second best .ini is
-        chosen among the confirmed ones by their worst period.
-        Next: robustness (how the neighbouring combinations perform) and stress with
-        higher funding and slippage.
+        SXE_Tune, a separate program: it runs many simulations of the same strategy in
+        parallel with different parameters and ranks them. SXE keeps running on its own.
+        Done: grid, random and zoom search (wide first, then narrower around the best);
+        rules between parameters written as named formulas in Optimize.ini, with a summary
+        to check before the start; constraints, ranking and the best .ini ready for SXE;
+        check of the best results on periods not used for the tuning.
+        Next: robustness of the neighbouring combinations and stress with higher costs.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)
