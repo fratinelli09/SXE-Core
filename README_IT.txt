@@ -301,7 +301,9 @@ sono elencate qui sotto.
         combinazioni (ricerca a griglia) su tutti i core; ogni corsa e' scritta in un file
         CSV appena finisce, con rendimento, drawdown, cicli, liquidazioni, commissioni e
         funding. Funziona con qualunque strategia: i parametri sono le chiavi del suo .ini.
-        Fatto: regole tra i parametri (per esempio percentuali che devono sommare a 100),
+        Fatto: regole tra i parametri scritte come formule con un nome, un piccolo
+        linguaggio in Optimize.ini (per esempio percentuali che devono sommare a 100, o una
+        grandezza ricavata dai parametri della strategia che deve stare sopra una soglia),
         prova a vuoto che controlla ogni valore con la strategia prima della prima
         simulazione, ricerca casuale per le griglie grandi (ripetibile con un seed), vincoli
         sui risultati (drawdown massimo, nessuna liquidazione, cicli minimi, leva massima),

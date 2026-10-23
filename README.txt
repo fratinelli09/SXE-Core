@@ -287,7 +287,9 @@ below.
         on all cores; each run is written to a CSV file as soon as it ends, with return,
         drawdown, cycles, liquidations, fees and funding. Any strategy can be tuned: the
         parameters are the keys of its .ini.
-        Done: rules between parameters (for example percentages that must add up to 100),
+        Done: rules between parameters written as formulas with names, a small language
+        in Optimize.ini (for example percentages that must add up to 100, or a derived
+        quantity of the strategy that must stay above a threshold),
         a dry run that checks every value with the strategy before the first simulation,
         random search for large grids (repeatable with a seed), constraints on the results
         (maximum drawdown, no liquidations, minimum cycles, maximum leverage), ranking by
