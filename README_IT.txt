@@ -301,11 +301,15 @@ sono elencate qui sotto.
         combinazioni (ricerca a griglia) su tutti i core; ogni corsa e' scritta in un file
         CSV appena finisce, con rendimento, drawdown, cicli, liquidazioni, commissioni e
         funding. Funziona con qualunque strategia: i parametri sono le chiavi del suo .ini.
-        In corso: regole tra i parametri (per esempio percentuali che devono sommare a 100),
+        Fatto: regole tra i parametri (per esempio percentuali che devono sommare a 100),
         prova a vuoto che controlla ogni valore con la strategia prima della prima
-        simulazione, ricerca casuale per le griglie grandi, vincoli sui risultati (drawdown
-        massimo, nessuna liquidazione, cicli minimi), classifica e il .ini migliore pronto
-        da usare.
+        simulazione, ricerca casuale per le griglie grandi (ripetibile con un seed), vincoli
+        sui risultati (drawdown massimo, nessuna liquidazione, cicli minimi, leva massima),
+        classifica per rendimento, rendimento/drawdown o drawdown, e il .ini migliore pronto
+        da usare con SXE.
+        Prossimo passo: verifica dei migliori su un periodo non usato per il tuning,
+        robustezza (come vanno le combinazioni vicine) e stress con funding e slippage piu'
+        alti.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e
