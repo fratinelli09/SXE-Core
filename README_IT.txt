@@ -318,9 +318,11 @@ sono elencate qui sotto.
         Fatto: riepilogo di formule e regole prima di partire, con i valori che ognuna
         legge, l'intervallo di ogni formula, quante combinazioni passa ogni regola ed esempi
         con i numeri al posto dei nomi; il tuning aspetta una conferma prima di simulare.
-        In corso: verifica dei migliori su uno o piu' periodi non usati per il tuning,
-        scelti in una sezione facoltativa di Optimize.ini, e un .ini migliore scelto tra i
-        risultati che tengono in tutti i periodi.
+        Fatto: verifica dei migliori su uno o piu' periodi non usati per il tuning, scelti
+        in una sezione facoltativa di Optimize.ini (un errore li' spegne la verifica con un
+        avviso, il tuning va avanti): un risultato e' confermato se rispetta i vincoli con
+        rendimento positivo in ogni periodo, e un secondo .ini migliore viene scelto tra i
+        confermati in base al loro periodo peggiore.
         Prossimo passo: robustezza (come vanno le combinazioni vicine) e stress con funding
         e slippage piu' alti.
 

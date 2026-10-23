@@ -303,9 +303,11 @@ below.
         reads, the range of every formula, how many combinations each rule lets through and
         worked examples with the numbers in place of the names; the tuning waits for a
         confirmation before simulating.
-        In progress: check of the best results on one or more periods not used for the
-        tuning, set in an optional section of Optimize.ini, and a best .ini chosen among
-        the results that hold up in every period.
+        Done: check of the best results on one or more periods not used for the tuning,
+        set in an optional section of Optimize.ini (a mistake there turns the check off
+        with a warning, the tuning goes on): a result is confirmed when it respects the
+        constraints with a positive return in every period, and a second best .ini is
+        chosen among the confirmed ones by their worst period.
         Next: robustness (how the neighbouring combinations perform) and stress with
         higher funding and slippage.
 
