@@ -315,6 +315,9 @@ sono elencate qui sotto.
         migliori da provare: in una prova circa l'1% delle combinazioni, con un risultato
         migliore di una ricerca casuale con lo stesso numero di corse. Piu' tuning possono
         girare insieme sulla stessa macchina.
+        Fatto: riepilogo di formule e regole prima di partire, con i valori che ognuna
+        legge, l'intervallo di ogni formula, quante combinazioni passa ogni regola ed esempi
+        con i numeri al posto dei nomi; il tuning aspetta una conferma prima di simulare.
         Prossimo passo: verifica dei migliori su un periodo non usato per il tuning,
         robustezza (come vanno le combinazioni vicine) e stress con funding e slippage piu'
         alti.

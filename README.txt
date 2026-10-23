@@ -299,6 +299,10 @@ below.
         results, each one narrower, until no neighbour of the best is left to try: in a
         test about 1% of the combinations, with a better result than a random search of
         the same size. Several tuning sessions can run at the same time on one machine.
+        Done: a summary of formulas and rules before the start, with the values each one
+        reads, the range of every formula, how many combinations each rule lets through and
+        worked examples with the numbers in place of the names; the tuning waits for a
+        confirmation before simulating.
         Next: check of the best results on a period not used for the tuning, robustness
         (how the neighbouring combinations perform) and stress with higher funding and
         slippage.
