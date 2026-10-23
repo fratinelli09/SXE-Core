@@ -303,9 +303,11 @@ below.
         reads, the range of every formula, how many combinations each rule lets through and
         worked examples with the numbers in place of the names; the tuning waits for a
         confirmation before simulating.
-        Next: check of the best results on a period not used for the tuning, robustness
-        (how the neighbouring combinations perform) and stress with higher funding and
-        slippage.
+        In progress: check of the best results on one or more periods not used for the
+        tuning, set in an optional section of Optimize.ini, and a best .ini chosen among
+        the results that hold up in every period.
+        Next: robustness (how the neighbouring combinations perform) and stress with
+        higher funding and slippage.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)
