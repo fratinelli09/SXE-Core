@@ -298,7 +298,7 @@ below.
         pass spread over the whole space, then passes on the neighbourhoods of the best
         results, each one narrower, until no neighbour of the best is left to try: in a
         test about 1% of the combinations, with a better result than a random search of
-        the same size.
+        the same size. Several tuning sessions can run at the same time on one machine.
         Next: check of the best results on a period not used for the tuning, robustness
         (how the neighbouring combinations perform) and stress with higher funding and
         slippage.
