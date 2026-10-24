@@ -1,0 +1,31 @@
+# Builds SXE Core and runs the CTest tests on every push and pull request.
+#
+# The golden tests compare results to the cent with references generated on Linux arm64
+# with GCC 14. On arm64 GCC fuses multiply-add into one instruction (FMA), x86-64 does not:
+# the last digits of some results differ. So the tests run on the same platform and compiler:
+# an arm64 runner with Debian 13 (GCC 14).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and test (Linux arm64, GCC 14)
+    runs-on: ubuntu-24.04-arm
+    container: debian:trixie
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends g++ cmake make ca-certificates git
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and test
+        run: ./comp_All.sh test

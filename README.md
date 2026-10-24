@@ -64,7 +64,8 @@ About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles 
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-17 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles.
+17 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+run by GitHub Actions on every push (Linux arm64, GCC 14).
 
 
 ## How it works

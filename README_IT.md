@@ -67,7 +67,7 @@ dentro la candela girano in 0,2 secondi.
 
 ### Testato
 17 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
-mano.
+mano, eseguiti da GitHub Actions a ogni push (Linux arm64, GCC 14).
 
 
 ## Come funziona
