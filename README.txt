@@ -294,14 +294,15 @@ This repository is the public edition of SXE Core, kept at the version described
 Engine features developed afterwards belong to the author's private edition and are listed
 below.
 
-    Parameter tuning                                                   in development
+    Parameter tuning                                                        available
         SXE_Tune, a separate program: it runs many simulations of the same strategy in
         parallel with different parameters and ranks them. SXE keeps running on its own.
-        Done: grid, random and zoom search (wide first, then narrower around the best);
-        rules between parameters written as named formulas in Optimize.ini, with a summary
-        to check before the start; constraints, ranking and the best .ini ready for SXE;
-        check of the best results on periods not used for the tuning.
-        Next: robustness of the neighbouring combinations.
+        Grid, random and zoom search (wide first, then narrower around the best); rules
+        between parameters written as named formulas in Optimize.ini, with a summary to
+        check before the start; constraints, ranking and the best .ini ready for SXE.
+        The best results are then checked on periods not used for the tuning and with
+        the neighbouring parameter values: the robust choice is the one whose worst case
+        is the highest.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)

@@ -307,14 +307,14 @@ Questo repository e' la versione pubblica di SXE Core, ferma alla versione descr
 Le funzionalita' del motore sviluppate dopo fanno parte della versione privata dell'autore e
 sono elencate qui sotto.
 
-    Tuning dei parametri                                                   in sviluppo
+    Tuning dei parametri                                                   disponibile
         SXE_Tune, programma separato: fa girare in parallelo tante simulazioni della
         stessa strategia con parametri diversi e le mette in classifica. SXE resta autonomo.
-        Fatto: ricerca a griglia, casuale e a zoom (prima larga, poi stretta sui migliori);
-        regole tra i parametri scritte come formule con un nome in Optimize.ini, con un
-        riepilogo da controllare prima di partire; vincoli, classifica e il .ini migliore
-        pronto per SXE; verifica dei migliori su periodi non usati per il tuning.
-        Prossimo passo: robustezza delle combinazioni vicine.
+        Ricerca a griglia, casuale e a zoom (prima larga, poi stretta sui migliori); regole
+        tra i parametri scritte come formule con un nome in Optimize.ini, con un riepilogo
+        da controllare prima di partire; vincoli, classifica e il .ini migliore pronto per
+        SXE. I migliori vengono poi controllati su periodi non usati per il tuning e con i
+        valori vicini dei parametri: la scelta robusta e' quella col caso peggiore piu' alto.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e
