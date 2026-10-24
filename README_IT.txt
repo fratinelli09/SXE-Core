@@ -314,7 +314,7 @@ sono elencate qui sotto.
         regole tra i parametri scritte come formule con un nome in Optimize.ini, con un
         riepilogo da controllare prima di partire; vincoli, classifica e il .ini migliore
         pronto per SXE; verifica dei migliori su periodi non usati per il tuning.
-        Prossimo passo: robustezza delle combinazioni vicine e stress con costi piu' alti.
+        Prossimo passo: robustezza delle combinazioni vicine.
 
     Interfaccia grafica                                                       prevista
         Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e

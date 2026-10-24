@@ -301,7 +301,7 @@ below.
         rules between parameters written as named formulas in Optimize.ini, with a summary
         to check before the start; constraints, ranking and the best .ini ready for SXE;
         check of the best results on periods not used for the tuning.
-        Next: robustness of the neighbouring combinations and stress with higher costs.
+        Next: robustness of the neighbouring combinations.
 
     Graphical interface                                                       planned
         Configuration, simulation with charts (price, orders, equity, drawdown, cycles)
