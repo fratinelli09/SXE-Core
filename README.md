@@ -145,6 +145,30 @@ Build options:
 ```
 
 
+## Example result
+
+The example strategy (Template, moving average crossover 20/50) on the data shipped with
+the repository: BTCUSDT 1h, 2023-2024, initial capital 5000 USDT, isolated margin.
+`Target/Bin/SXE` prints:
+
+```text
+Simulation finished (end of data) at 2025-01-01 00:00: equity 7183.89 USDT (+43.68% on the
+initial capital), drawdown max -19.42%, closed cycles 219 (in profit 81), liquidations 0,
+orders 439, rejected 0, fees 832.42 USDT, funding 795.75 USDT, last cycle still open
+(archived); 136901 steps in 0.2 s (781833 steps/s)
+```
+
+Equity and drawdown at the close of each cycle, from `Target/Backup/total_result.txt`
+(the -19.42% above also counts open positions, tick by tick):
+
+![Equity and drawdown of the Template strategy](docs/equity_template.svg)
+
+The chart is drawn by `python3 docs/equity_chart.py Target/Backup/total_result.txt out.svg`
+(standard library only), also for your own runs.
+
+The Template shows how to write a strategy; it is not a strategy to trade.
+
+
 ## Using your own data
 
 In `Target/Config/EngineConfig.ini`:
@@ -287,6 +311,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | `file/Strategies/Template` | example strategy |
 | `file/Tests` | tests, fixed data, golden references |
 | `cmake/` | `sxe_add_strategy`, also for strategies outside the project |
+| `docs/` | example chart and `equity_chart.py`, which draws it from `total_result.txt` |
 | `Target/Config` | example configuration: `EngineConfig.ini`, `Template.ini` |
 | `Target/Bin`, `Log`, `Backup` | created by the build and by the runs (not in the repository) |
 
