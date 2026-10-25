@@ -306,7 +306,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 
 Questo repository è la versione pubblica di SXE Core, ferma alla versione descritta qui.
 Le funzionalità del motore sviluppate dopo fanno parte della versione privata dell'autore e
-sono elencate qui sotto.
+sono elencate qui sotto. Per informazioni sulla versione privata vedi [Contatti](#contatti).
 
 ### Tuning dei parametri - disponibile
 SXE_Tune, programma separato: fa girare in parallelo tante simulazioni della stessa
@@ -321,6 +321,15 @@ scelta robusta è quella col caso peggiore più alto.
 Configurazione, simulazione con grafici (prezzo, ordini, equity, drawdown, cicli) e tuning
 dei parametri da una finestra. Programma separato: SXE continua a funzionare da solo anche
 senza.
+
+
+## Contatti
+
+Francesco Tinelli - [LinkedIn](https://www.linkedin.com/in/francesco-tinelli)
+
+Scrivimi per domande su SXE Core, per il permesso di usarlo a fini commerciali
+(vedi [Licenza](#licenza)) o per informazioni sulla versione privata.
+Le segnalazioni di bug sono benvenute come issue su GitHub.
 
 
 ## Licenza
