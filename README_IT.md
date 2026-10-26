@@ -3,20 +3,21 @@
 Motore C++17 che esegue strategie di trading caricate come librerie esterne, con un
 simulatore realistico dei futures perpetui con margine in USDT.
 
-La strategia è compilata come libreria separata (`.so`) e non sa da dove arrivano i prezzi.
+La strategia è compilata come libreria separata (`.so` su Linux, `.dll` su Windows) e non sa
+da dove arrivano i prezzi.
 Il motore la carica all'avvio, ne controlla l'interfaccia, le passa i dati del mercato passo
 dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le regole di uno
 vero: ordini a mercato e limite, commissioni taker e maker, slippage, margine
 isolated/crossed, margine di mantenimento a scaglioni, funding ogni 8 ore e liquidazione.
 
-Versione 1.2.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
+Versione 1.3.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
 English version: [README.md](README.md)
 
 
 ## Punti di forza
 
 ### Strategie come plugin
-Si scrive una classe, si aggiunge una macro, si compila una `.so`. Il motore rifiuta le
+Si scrive una classe, si aggiunge una macro, si compila una libreria condivisa. Il motore rifiuta le
 librerie che non sono strategie o che sono state compilate con un'altra versione
 dell'interfaccia. Le strategie si possono compilare anche fuori dal progetto con una sola
 funzione CMake.
@@ -62,8 +63,8 @@ si indica per mese (2023-01 -> 2025-10) o per giorno, con un avviso se i dati no
 Ogni chiave viene controllata all'avvio e gli errori vengono segnalati tutti insieme.
 
 ### Incorporabile
-Lo stesso motore è anche una libreria condivisa con interfaccia C (`libSXE.so`, `sxe.h`), per
-usarlo da altri programmi e linguaggi: vedi [Usare SXE Core come libreria](#usare-sxe-core-come-libreria).
+Lo stesso motore è anche una libreria condivisa con interfaccia C (`libSXE.so` su Linux,
+`SXE.dll` su Windows, `sxe.h`), per usarlo da altri programmi e linguaggi: vedi [Usare SXE Core come libreria](#usare-sxe-core-come-libreria).
 
 ### Veloce
 Circa 700.000 passi al secondo su un Raspberry Pi 4: due anni di candele da 1 ora con i tick
@@ -71,7 +72,8 @@ dentro la candela girano in 0,2 secondi.
 
 ### Testato
 23 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
-mano, eseguiti da GitHub Actions a ogni push (Linux arm64, GCC 14).
+mano, eseguiti da GitHub Actions a ogni push su Linux arm64 (GCC 14) e Windows x64 (MSVC), con
+gli stessi riferimenti golden su entrambi.
 
 
 ## Come funziona
@@ -128,8 +130,15 @@ precedente in `ctx.vFills`. Alla liquidazione l'exchange cancella tutti gli ordi
 
 ## Avvio rapido
 
-Requisiti: Linux, CMake 3.16 o successivo, un compilatore C++17
-(provato con GCC 14 su Raspberry Pi OS 64 bit).
+### Windows, pronto all'uso
+Ogni release ha `SXE-Core-windows-x64.zip`: si estrae e si lancia `Bin\SXE.exe`. Contiene il
+motore, la strategia e la configurazione di esempio, i dati di prova e l'interfaccia C
+(`SXE.dll`, `SXE.lib`, `Include\sxe.h`). Serve il Microsoft Visual C++ Redistributable (x64),
+già presente sulla maggior parte dei sistemi.
+
+### Compilare su Linux
+Requisiti: CMake 3.16 o successivo, un compilatore C++17 (provato con GCC 14 su Raspberry Pi
+OS 64 bit).
 
 ```sh
 ./comp_All.sh test        # compila, installa in Target/ e lancia i test
@@ -148,6 +157,18 @@ Opzioni di compilazione:
 ./comp_All.sh debug       # build Debug
 ./comp_All.sh test        # build Release + test
 ./comp_All.sh clean       # cancella la cartella di lavoro di CMake CMakeWork/
+```
+
+### Compilare su Windows
+Requisiti: Visual Studio 2022 con "Sviluppo di applicazioni desktop con C++". Da un
+"x64 Native Tools Command Prompt", nella cartella del progetto:
+
+```bat
+cmake -S . -B CMakeWork -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build CMakeWork
+ctest --test-dir CMakeWork
+cmake --install CMakeWork
+Target\Bin\SXE.exe
 ```
 
 
@@ -228,15 +249,19 @@ funding   timestamp,funding_rate
    sxe_add_strategy(NAME Mia SOURCES CMiaStrategia.cpp CONFIG Mia.ini)
    ```
 
-   Questo installa `libMia.so` in `Target/Bin/Strategies` e `Mia.ini` in `Target/Config`.
+   Questo installa `libMia.so` (Windows: `libMia.dll`) in `Target/Bin/Strategies` e `Mia.ini`
+   in `Target/Config`.
 
 5. Selezionarla in `EngineConfig.ini`:
 
    ```ini
    [STRATEGY]
-   library = libMia.so
+   library = Mia
    config  = ../Config/Mia.ini
    ```
+
+   Un nome senza estensione diventa `libMia.so` su Linux e `libMia.dll` su Windows, così la
+   stessa configurazione va bene per entrambi; si può scrivere anche il nome completo del file.
 
 I file che la strategia scrive in `InitContext::strLogDir` vengono archiviati con il ciclo
 automaticamente.
@@ -248,8 +273,8 @@ Una strategia che salva un suo stato (per esempio accanto al suo `.ini`) lo rica
 
 ## Usare SXE Core come libreria
 
-Oltre al programma `SXE`, la build produce `libSXE.so`: lo stesso motore dietro
-un'interfaccia C, [`file/Api/Include/sxe.h`](file/Api/Include/sxe.h), usabile da qualunque
+Oltre al programma `SXE`, la build produce `libSXE.so` (Windows: `SXE.dll`): lo stesso
+motore dietro un'interfaccia C, [`file/Api/Include/sxe.h`](file/Api/Include/sxe.h), usabile da qualunque
 linguaggio sappia chiamare funzioni C (C, C++ con qualsiasi compilatore, Python, C#, Rust, ...).
 
 ```c
@@ -285,12 +310,24 @@ int main(void)
 gcc -std=c99 main.c -I file/Api/Include -L Target/Bin -lSXE -Wl,-rpath,$PWD/Target/Bin -o main
 ```
 
+Su Windows (x64 Native Tools Command Prompt):
+
+```bat
+cl main.c /I file\Api\Include Target\Bin\SXE.lib
+set PATH=%CD%\Target\Bin;%PATH%
+main.exe
+```
+
+Windows trova `SXE.dll` e le DLL del motore che le servono solo accanto al programma o nel
+`PATH`: si copia il programma in `Target\Bin` o si aggiunge quella cartella al `PATH`, come
+sopra.
+
 - Un motore = una corsa: si configura, `sxe_engine_run()`, si legge il risultato, si
   distrugge. Più motori possono girare insieme, ognuno nel suo thread.
 - Configurazione: le sezioni e le chiavi di `EngineConfig.ini`, da file
   (`sxe_engine_load_config`), una per una (`sxe_engine_set`) o entrambe. Stessi controlli del
   programma `SXE`; tutti gli errori si leggono con `sxe_engine_error()`. I percorsi relativi
-  partono dalla cartella di `libSXE.so` (`Target/Bin`), come per `SXE`.
+  partono dalla cartella di `libSXE.so` / `SXE.dll` (`Target/Bin`), come per `SXE`.
 - Callback per i messaggi di log, per l'avanzamento (ogni N passi) e per ogni ciclo chiuso.
 - Opzioni per spegnere archivio, file di stato, registro ordini e file di log, per i
   programmi a cui servono solo i numeri.
@@ -348,7 +385,7 @@ funding, 2023-2024) e su poche candele costruite a mano:
 | `limit_touch` | lo stesso con `limit_fill = touch`: eseguito appena toccato |
 | `multirun_golden_template` | più motori nello stesso processo: una corsa completa, una che non scrive file e 4 in parallelo danno gli stessi numeri |
 | `multirun_golden_isolated` | lo stesso con le liquidazioni |
-| `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | le stesse corse golden attraverso l'interfaccia C (`libSXE.so`) da un programma scritto in C |
+| `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | le stesse corse golden attraverso l'interfaccia C (`libSXE.so` / `SXE.dll`) da un programma scritto in C |
 | `api_checks` | interfaccia C: callback, opzioni senza file, configurazione senza file, arresto, tutti i codici di errore |
 | `benchmark` | passi al secondo (solo misura) |
 
@@ -366,7 +403,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | Cartella | Contenuto |
 |---|---|
 | `file/` | tutti i sorgenti, una cartella per componente (vedi [file/README.md](file/README.md)) |
-| `file/Api` | interfaccia C: `sxe.h` e `libSXE.so` |
+| `file/Api` | interfaccia C: `sxe.h` e `libSXE.so` / `SXE.dll` |
 | `file/Engine` | ciclo del motore, caricamento della strategia, archivio dei cicli, stato |
 | `file/Exchange` | interfaccia dell'exchange ed exchange simulato |
 | `file/DataFeed` | interfaccia dei dati e lettore CSV con i tick nella candela |
@@ -387,7 +424,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
   versione.
 - Posizioni long con ordini a mercato e limite (apertura/aumento, chiusura completa), un
   simbolo per avvio.
-- Solo Linux (le strategie vengono caricate con `dlopen`).
+- Linux e Windows x64; macOS non è provato.
 
 
 ## Versione pubblica e versione privata

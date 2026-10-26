@@ -6,6 +6,25 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
+## 1.3.0 - 2026-10-26
+
+The strategy interface does not change (`SXE_API_VERSION` 3), but strategies must be
+rebuilt on each system. Same results as 1.2.0: the golden references are unchanged and
+are the same on Linux and Windows.
+
+### Windows
+
+- Builds with Visual Studio 2022 (MSVC, x64): the engine, `SXE.exe`, the strategies as
+  DLLs and the C interface `SXE.dll` + `SXE.lib`.
+- CI: a Windows x64 job builds and runs the 23 tests; every release gets
+  `SXE-Core-windows-x64.zip`, ready to run.
+- `[STRATEGY] library` accepts a name without extension: `Template` becomes
+  `libTemplate.so` on Linux and `libTemplate.dll` on Windows.
+- `-ffp-contract=off` with GCC/Clang: no fused multiply-add, the same results on every
+  processor.
+- `.gitattributes`: text files always with LF line ends, also in a Windows checkout.
+
+
 ## 1.2.0 - 2026-10-26
 
 The strategy interface does not change (`SXE_API_VERSION` 3): strategies built for 1.1.0

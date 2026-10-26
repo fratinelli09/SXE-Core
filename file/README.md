@@ -2,6 +2,8 @@
 
 Everything that is compiled. Every folder has its own `CMakeLists.txt`;
 `Include/` = headers, `Src/` = implementation.
+Library names are those of Linux: on Windows `libEngine.so` is `Engine.dll`, `libSXE.so` is
+`SXE.dll`, and a strategy `libTemplate.so` is `libTemplate.dll`.
 
 ### App/ -> SXE
 `main.cpp`: reads `Target/Config/EngineConfig.ini`, prepares and starts the engine, handles
@@ -16,7 +18,7 @@ C interface of the engine, for other programs and languages.
 ### Engine/ -> libEngine.so
 The engine.
 - `CEngine`: single thread, every step data -> exchange -> `Run()` of the strategy.
-- `CStrategyLoader`: opens the strategy `.so` and checks its interface.
+- `CStrategyLoader`: opens the strategy library and checks its interface.
 - `CCycleArchive`: at the end of a cycle creates `Backup/b<N>`, moves the Log files and
   updates `total_result.txt`.
 - `CSimStateFile`: saves and reloads the simulation state (`last_row.txt`) for resume.
