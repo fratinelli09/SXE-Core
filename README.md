@@ -3,21 +3,21 @@
 A C++17 engine that runs trading strategies as plug-in libraries, with a realistic simulator
 of USDT-margined perpetual futures.
 
-The strategy is compiled as a separate shared library (`.so`) and knows nothing about where
-its prices come from. The engine loads it at runtime, checks its interface, feeds it market
-data step by step and executes its orders on a simulated exchange that reproduces the rules
-of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
+The strategy is compiled as a separate shared library (`.so` on Linux, `.dll` on Windows)
+and knows nothing about where its prices come from. The engine loads it at runtime, checks
+its interface, feeds it market data step by step and executes its orders on a simulated
+exchange that reproduces the rules of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.2.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
+Version 1.3.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
 Italian version: [README_IT.md](README_IT.md)
 
 
 ## Highlights
 
 ### Strategies as plug-ins
-Write a class, add one macro, build a `.so`. The engine refuses libraries that are not
-strategies or that were built against a different interface version. Strategies can also be
+Write a class, add one macro, build a shared library. The engine refuses libraries that
+are not strategies or that were built against a different interface version. Strategies can also be
 built outside the project tree with a single CMake function.
 
 ### Deterministic, single-threaded engine
@@ -60,8 +60,8 @@ Historical data live in any folder (`[PATH] data`). The period to simulate is se
 Every key is validated at startup and all errors are reported at once.
 
 ### Embeddable
-The same engine is also a shared library with a C interface (`libSXE.so`, `sxe.h`), to use
-it from other programs and languages: see [Using SXE Core as a library](#using-sxe-core-as-a-library).
+The same engine is also a shared library with a C interface (`libSXE.so` on Linux,
+`SXE.dll` on Windows, `sxe.h`), to use it from other programs and languages: see [Using SXE Core as a library](#using-sxe-core-as-a-library).
 
 ### Fast
 About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles with
@@ -69,7 +69,8 @@ intra-candle ticks run in 0.2 seconds.
 
 ### Tested
 23 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
-run by GitHub Actions on every push (Linux arm64, GCC 14).
+run by GitHub Actions on every push on Linux arm64 (GCC 14) and Windows x64 (MSVC), with
+the same golden references on both.
 
 
 ## How it works
@@ -126,8 +127,15 @@ limit orders are in `ctx.vOpenOrders`, the limit orders filled since the previou
 
 ## Quick start
 
-Requirements: Linux, CMake 3.16 or later, a C++17 compiler
-(tested with GCC 14 on Raspberry Pi OS 64-bit).
+### Windows, ready to run
+Every release has `SXE-Core-windows-x64.zip`: extract it and run `Bin\SXE.exe`. It contains
+the engine, the example strategy and configuration, the test data and the C interface
+(`SXE.dll`, `SXE.lib`, `Include\sxe.h`). It needs the Microsoft Visual C++ Redistributable
+(x64), already present on most systems.
+
+### Build on Linux
+Requirements: CMake 3.16 or later, a C++17 compiler (tested with GCC 14 on Raspberry Pi OS
+64-bit).
 
 ```sh
 ./comp_All.sh test        # build, install into Target/ and run the tests
@@ -146,6 +154,18 @@ Build options:
 ./comp_All.sh debug       # Debug build
 ./comp_All.sh test        # Release build + tests
 ./comp_All.sh clean       # removes the CMake work folder CMakeWork/
+```
+
+### Build on Windows
+Requirements: Visual Studio 2022 with "Desktop development with C++". From an
+"x64 Native Tools Command Prompt", in the project folder:
+
+```bat
+cmake -S . -B CMakeWork -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build CMakeWork
+ctest --test-dir CMakeWork
+cmake --install CMakeWork
+Target\Bin\SXE.exe
 ```
 
 
@@ -226,15 +246,19 @@ funding   timestamp,funding_rate
    sxe_add_strategy(NAME My SOURCES CMyStrategy.cpp CONFIG My.ini)
    ```
 
-   This installs `libMy.so` into `Target/Bin/Strategies` and `My.ini` into `Target/Config`.
+   This installs `libMy.so` (Windows: `libMy.dll`) into `Target/Bin/Strategies` and `My.ini`
+   into `Target/Config`.
 
 5. Select it in `EngineConfig.ini`:
 
    ```ini
    [STRATEGY]
-   library = libMy.so
+   library = My
    config  = ../Config/My.ini
    ```
+
+   A name without extension becomes `libMy.so` on Linux and `libMy.dll` on Windows, so the
+   same configuration works on both; a full file name is also accepted.
 
 Files the strategy writes in `InitContext::strLogDir` are archived with the cycle
 automatically.
@@ -246,8 +270,8 @@ is false the run starts from scratch and any state left by a previous run must b
 
 ## Using SXE Core as a library
 
-Besides the `SXE` program, the build produces `libSXE.so`: the same engine behind a C
-interface, [`file/Api/Include/sxe.h`](file/Api/Include/sxe.h), that any language able to call
+Besides the `SXE` program, the build produces `libSXE.so` (Windows: `SXE.dll`): the same
+engine behind a C interface, [`file/Api/Include/sxe.h`](file/Api/Include/sxe.h), that any language able to call
 C functions can use (C, C++ with any compiler, Python, C#, Rust, ...).
 
 ```c
@@ -283,12 +307,23 @@ int main(void)
 gcc -std=c99 main.c -I file/Api/Include -L Target/Bin -lSXE -Wl,-rpath,$PWD/Target/Bin -o main
 ```
 
+On Windows (x64 Native Tools Command Prompt):
+
+```bat
+cl main.c /I file\Api\Include Target\Bin\SXE.lib
+set PATH=%CD%\Target\Bin;%PATH%
+main.exe
+```
+
+Windows finds `SXE.dll` and the engine DLLs it needs only next to the program or in `PATH`:
+copy the program into `Target\Bin` or add that folder to `PATH`, as above.
+
 - One engine = one run: configure, `sxe_engine_run()`, read the result, destroy. Several
   engines can run at the same time, each in its own thread.
 - Configuration: the sections and keys of `EngineConfig.ini`, from a file
   (`sxe_engine_load_config`), one by one (`sxe_engine_set`) or both. Same checks as the
   `SXE` program; every error is returned by `sxe_engine_error()`. Relative paths start from
-  the folder of `libSXE.so` (`Target/Bin`), like for `SXE`.
+  the folder of `libSXE.so` / `SXE.dll` (`Target/Bin`), like for `SXE`.
 - Callbacks for log messages, progress (every N steps) and every closed cycle.
 - Options to turn off the archive, the state file, the order log and the log files, for
   programs that only need the numbers.
@@ -346,7 +381,7 @@ funding, 2023-2024) and on a few hand-made candles:
 | `limit_touch` | the same with `limit_fill = touch`: filled as soon as it is touched |
 | `multirun_golden_template` | several engines in one process: a full run, a run that writes no files and 4 runs in parallel give the same numbers |
 | `multirun_golden_isolated` | the same with liquidations |
-| `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | the same golden runs through the C interface (`libSXE.so`) from a program written in C |
+| `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | the same golden runs through the C interface (`libSXE.so` / `SXE.dll`) from a program written in C |
 | `api_checks` | C interface: callbacks, options without files, configuration without files, stop, every error code |
 | `benchmark` | steps per second (measurement only) |
 
@@ -364,7 +399,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | Folder | Content |
 |---|---|
 | `file/` | all sources, one folder per component (see [file/README.md](file/README.md)) |
-| `file/Api` | C interface: `sxe.h` and `libSXE.so` |
+| `file/Api` | C interface: `sxe.h` and `libSXE.so` / `SXE.dll` |
 | `file/Engine` | the engine loop, strategy loader, cycle archive, state |
 | `file/Exchange` | exchange interface and simulated exchange |
 | `file/DataFeed` | data feed interface and CSV feed with intra-candle ticks |
@@ -383,7 +418,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 
 - Simulation only: `mode = REAL` is reserved for live trading, not part of this edition.
 - Long positions with market and limit orders (open/increase, full close), one symbol per run.
-- Linux only (strategies are loaded with `dlopen`).
+- Linux and Windows x64; macOS is not tested.
 
 
 ## Public and private edition

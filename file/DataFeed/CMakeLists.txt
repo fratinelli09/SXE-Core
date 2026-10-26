@@ -9,4 +9,4 @@ target_include_directories(DataFeed PUBLIC
 
 target_link_libraries(DataFeed PUBLIC Common)
 
-install(TARGETS DataFeed LIBRARY DESTINATION ${SXE_BIN_DIR})
+install(TARGETS DataFeed LIBRARY DESTINATION ${SXE_BIN_DIR} RUNTIME DESTINATION ${SXE_BIN_DIR} ARCHIVE DESTINATION ${SXE_BIN_DIR})

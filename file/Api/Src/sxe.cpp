@@ -1,6 +1,12 @@
 #include "sxe.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -44,12 +50,23 @@ namespace
 
 	std::string LibraryDir()
 	{
+#ifdef _WIN32
+		HMODULE hModule = nullptr;
+		wchar_t szPath[MAX_PATH * 4] = {};
+		if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+		                       reinterpret_cast<LPCWSTR>(&sxe_version), &hModule) ||
+		   GetModuleFileNameW(hModule, szPath, static_cast<DWORD>(sizeof(szPath) / sizeof(szPath[0]))) == 0)
+			return fs::current_path().string();
+		const fs::path pLib(szPath);
+#else
 		Dl_info info;
 		if(dladdr(reinterpret_cast<void*>(&sxe_version), &info) == 0 || info.dli_fname == nullptr)
 			return fs::current_path().string();
+		const fs::path pLib(info.dli_fname);
+#endif
 		std::error_code ec;
-		const fs::path pLib = fs::canonical(info.dli_fname, ec);
-		return ec ? fs::current_path().string() : pLib.parent_path().string();
+		const fs::path pCanonical = fs::canonical(pLib, ec);
+		return ec ? fs::current_path().string() : pCanonical.parent_path().string();
 	}
 
 	std::string Join(const std::vector<std::string>& vLines)

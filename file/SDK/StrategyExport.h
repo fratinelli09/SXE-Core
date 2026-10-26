@@ -9,7 +9,11 @@ typedef int            (*SXE_ApiVersionFn)();
 typedef CStrategyBase* (*SXE_CreateFn)();
 typedef void           (*SXE_DestroyFn)(CStrategyBase*);
 
+#ifdef _WIN32
+#define SXE_EXPORT __declspec(dllexport)
+#else
 #define SXE_EXPORT __attribute__((visibility("default")))
+#endif
 
 #define SXE_EXPORT_STRATEGY(ClassName)											\
 	extern "C" SXE_EXPORT int SXE_ApiVersion()									\

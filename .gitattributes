@@ -1,0 +1,4 @@
+# text files always with LF line endings, also in a Windows checkout: the data files and the
+# golden references are compared byte by byte
+* text=auto eol=lf
+*.png binary
