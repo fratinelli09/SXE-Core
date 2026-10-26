@@ -93,13 +93,22 @@ sxe_test_strategy_config(TestStrategy_limit_small 1 0      2)
 
 set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+# a library that is not a strategy: the engine's own Common library
+if(WIN32)
+    set(SXE_TEST_NOT_STRATEGY     Common.dll)
+    set(SXE_TEST_NOT_STRATEGY_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+else()
+    set(SXE_TEST_NOT_STRATEGY     libCommon.so)
+    set(SXE_TEST_NOT_STRATEGY_DIR ${CMAKE_BINARY_DIR}/file/Common)
+endif()
+
 #--- 1. configuration and loading: errors detected ---------------------------
-sxe_test_config(loader_not_strategy LIBRARY libCommon.so FOLDER ${CMAKE_BINARY_DIR}/file/Common
+sxe_test_config(loader_not_strategy LIBRARY ${SXE_TEST_NOT_STRATEGY} FOLDER ${SXE_TEST_NOT_STRATEGY_DIR}
                 STRATEGY_CONFIG ${TEMPLATE_CONFIG})
 add_test(NAME loader_not_strategy COMMAND SXE ${TEST_DIR}/loader_not_strategy.ini)
 set_tests_properties(loader_not_strategy PROPERTIES PASS_REGULAR_EXPRESSION "Not an SXE strategy")
 
-sxe_test_config(loader_old_api LIBRARY libOldApiStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(loader_old_api LIBRARY OldApiStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEMPLATE_CONFIG})
 add_test(NAME loader_old_api COMMAND SXE ${TEST_DIR}/loader_old_api.ini)
 set_tests_properties(loader_old_api PROPERTIES PASS_REGULAR_EXPRESSION "interface version")
@@ -118,33 +127,33 @@ set_tests_properties(config_example PROPERTIES
 
 #--- 2. results identical to the references ---------------------------------
 # Template, path following the candle direction
-sxe_test_config(golden_template LIBRARY libTemplate.so FOLDER ${TEMPLATE_DIR} STRATEGY_CONFIG ${TEMPLATE_CONFIG})
+sxe_test_config(golden_template LIBRARY Template FOLDER ${TEMPLATE_DIR} STRATEGY_CONFIG ${TEMPLATE_CONFIG})
 # test strategy with leverage 10: orders inside the candle, funding, isolated liquidations
-sxe_test_config(golden_isolated LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(golden_isolated LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
 # same strategy in crossed mode: the simulation ends at the first liquidation
-sxe_test_config(golden_crossed LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(golden_crossed LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini MARGIN crossed)
 # extreme paths inside the candle
-sxe_test_config(golden_low_first LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(golden_low_first LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini INTRABAR 2)
-sxe_test_config(golden_high_first LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(golden_high_first LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini INTRABAR 3)
 
 # real Bitget rules: tiered maintenance margin, slippage 0.005%, funding x2;
 # capital 100,000 with leverage 10: the position exceeds 200,000 USDT, where the tiers matter
-sxe_test_config(golden_bitget LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(golden_bitget LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini CAPITAL 100000 SLIPPAGE 0.00005 FUNDING_MULT 2
                 TIERS "200000:0.004, 1000000:0.005, 5000000:0.007, 15000000:0.01, 50000000:0.02")
 
 # liquidation off: the engine warns that the result is not realistic when the equity goes below zero
-sxe_test_config(no_liquidation_warning LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(no_liquidation_warning LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini LIQUIDATION 0)
 add_test(NAME no_liquidation_warning COMMAND SXE ${TEST_DIR}/no_liquidation_warning.ini)
 set_tests_properties(no_liquidation_warning PROPERTIES PASS_REGULAR_EXPRESSION "Equity below zero .* = 0: on a real account")
 
 # limit orders: entry at market, limit buy 3% lower, limit close at +2% moved when the average price changes
-sxe_test_config(golden_limit LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(golden_limit LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini)
 
 foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_first golden_high_first golden_bitget golden_limit)
@@ -155,11 +164,11 @@ foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_fi
 endforeach()
 
 #--- 3. resume: stop mid-candle + resume = uninterrupted run -----------------
-sxe_test_config(resume_full LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(resume_full LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini RESUME 1)
-sxe_test_config(resume_stop LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(resume_stop LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_stop.ini DIR resume_split RESUME 1)
-sxe_test_config(resume_continue LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(resume_continue LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini DIR resume_split RESUME 1)
 add_test(NAME resume
          COMMAND ${CMAKE_COMMAND} -DMODE=RESUME -DSXE=$<TARGET_FILE:SXE>
@@ -168,11 +177,11 @@ add_test(NAME resume
                  -DDIR_RESUME=${TEST_DIR}/resume_split -P ${SXE_TEST_SCRIPT})
 
 # the same with open limit orders: the state keeps them
-sxe_test_config(resume_limit_full LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(resume_limit_full LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini RESUME 1)
-sxe_test_config(resume_limit_stop LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(resume_limit_stop LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit_stop.ini DIR resume_limit_split RESUME 1)
-sxe_test_config(resume_limit_continue LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(resume_limit_continue LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini DIR resume_limit_split RESUME 1)
 add_test(NAME resume_limit
          COMMAND ${CMAKE_COMMAND} -DMODE=RESUME -DSXE=$<TARGET_FILE:SXE>
@@ -193,7 +202,7 @@ foreach(LIMIT_FILL through touch)
         set(LIMIT_HOUR 01)
         set(LIMIT_ABSENT "^2024-01-01 02:[^|]*\\|FILL_BUY")
     endif()
-    sxe_test_config(limit_${LIMIT_FILL} LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+    sxe_test_config(limit_${LIMIT_FILL} LIBRARY TestStrategy FOLDER ${TEST_DIR}
                     STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit_small.ini SLIPPAGE 0
                     DATA_FILE BTCUSDT_limit_test.csv LIMIT_FILL ${LIMIT_FILL})
     add_test(NAME limit_${LIMIT_FILL}
@@ -226,10 +235,10 @@ foreach(API_PROGRAM SxeApiRun SxeApiTest)
 endforeach()
 
 # a run through the C interface gives the same cycles as the SXE program
-sxe_test_config(api_golden_template LIBRARY libTemplate.so FOLDER ${TEMPLATE_DIR} STRATEGY_CONFIG ${TEMPLATE_CONFIG})
-sxe_test_config(api_golden_isolated LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(api_golden_template LIBRARY Template FOLDER ${TEMPLATE_DIR} STRATEGY_CONFIG ${TEMPLATE_CONFIG})
+sxe_test_config(api_golden_isolated LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
-sxe_test_config(api_golden_limit LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(api_golden_limit LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini)
 foreach(API_TEST template isolated limit)
     add_test(NAME api_golden_${API_TEST}
@@ -239,14 +248,14 @@ foreach(API_TEST template isolated limit)
 endforeach()
 
 # callbacks, options, configuration without files, errors
-sxe_test_config(api_checks LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(api_checks LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
 add_test(NAME api_checks
-         COMMAND SxeApiTest ${TEST_DIR}/api_checks.ini ${TEST_DIR}/api_checks ${TEST_DIR} libTestStrategy.so
+         COMMAND SxeApiTest ${TEST_DIR}/api_checks.ini ${TEST_DIR}/api_checks ${TEST_DIR} TestStrategy
                  ${TEST_DIR}/TestStrategy_lev10.ini ${SXE_TEST_SOURCE_DIR}/Data)
 
 #--- 6. speed (measurement only) ---------------------------------------------
-sxe_test_config(benchmark LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+sxe_test_config(benchmark LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini)
 add_test(NAME benchmark
          COMMAND ${CMAKE_COMMAND} -DMODE=BENCH -DSXE=$<TARGET_FILE:SXE>

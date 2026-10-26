@@ -1,8 +1,68 @@
 #include "CStrategyLoader.h"
 
-#include <dlfcn.h>
 #include <filesystem>
 #include <system_error>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
+namespace
+{
+#ifdef _WIN32
+	void* OpenLibrary(const std::string& strPath)
+	{
+		return reinterpret_cast<void*>(LoadLibraryW(std::filesystem::path(strPath).wstring().c_str()));
+	}
+
+	void* FindSymbol(void* pHandle, const char* pszName)
+	{
+		return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(pHandle), pszName));
+	}
+
+	void CloseLibrary(void* pHandle)
+	{
+		FreeLibrary(static_cast<HMODULE>(pHandle));
+	}
+
+	std::string LibraryError()
+	{
+		const DWORD nError = GetLastError();
+		char buf[512] = {};
+		const DWORD nLen = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, nError,
+		                                  0, buf, sizeof(buf), nullptr);
+		std::string strMsg(buf, nLen);
+		while(!strMsg.empty() && (strMsg.back() == '\n' || strMsg.back() == '\r' || strMsg.back() == ' ' || strMsg.back() == '.'))
+			strMsg.pop_back();
+		return strMsg + " (error " + std::to_string(nError) + ")";
+	}
+#else
+	void* OpenLibrary(const std::string& strPath)
+	{
+		return dlopen(strPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+	}
+
+	void* FindSymbol(void* pHandle, const char* pszName)
+	{
+		return dlsym(pHandle, pszName);
+	}
+
+	void CloseLibrary(void* pHandle)
+	{
+		dlclose(pHandle);
+	}
+
+	std::string LibraryError()
+	{
+		const char* pszErr = dlerror();
+		return pszErr ? pszErr : "unknown error";
+	}
+#endif
+}
 
 CStrategyLoader::CStrategyLoader():
 	pHandle(nullptr),
@@ -27,18 +87,16 @@ bool CStrategyLoader::Load(const std::string& strPath)
 		return false;
 	}
 
-	pHandle = dlopen(strPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+	pHandle = OpenLibrary(strPath);
 	if(!pHandle)
 	{
-		const char* pszErr = dlerror();
-		strLastError = "Library cannot be loaded: " + std::string(pszErr ? pszErr : strPath);
+		strLastError = "Library cannot be loaded: " + strPath + ": " + LibraryError();
 		return false;
 	}
 
-	dlerror();
-	auto pfnVersion = reinterpret_cast<SXE_ApiVersionFn>(dlsym(pHandle, SXE_SYMBOL_API_VERSION));
-	auto pfnCreate  = reinterpret_cast<SXE_CreateFn>(dlsym(pHandle, SXE_SYMBOL_CREATE));
-	pfnDestroy      = reinterpret_cast<SXE_DestroyFn>(dlsym(pHandle, SXE_SYMBOL_DESTROY));
+	auto pfnVersion = reinterpret_cast<SXE_ApiVersionFn>(FindSymbol(pHandle, SXE_SYMBOL_API_VERSION));
+	auto pfnCreate  = reinterpret_cast<SXE_CreateFn>(FindSymbol(pHandle, SXE_SYMBOL_CREATE));
+	pfnDestroy      = reinterpret_cast<SXE_DestroyFn>(FindSymbol(pHandle, SXE_SYMBOL_DESTROY));
 
 	std::string strMissing;
 	if(!pfnVersion) strMissing += " " SXE_SYMBOL_API_VERSION;
@@ -81,6 +139,6 @@ void CStrategyLoader::Unload()
 	pfnDestroy = nullptr;
 
 	if(pHandle)
-		dlclose(pHandle);
+		CloseLibrary(pHandle);
 	pHandle = nullptr;
 }

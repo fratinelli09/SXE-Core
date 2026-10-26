@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
 	sxe_engine_destroy(e);
 
 	e = NewEngine("not_strategy");
-	sxe_engine_set(e, "STRATEGY", "library", "libOldApiStrategy.so");
+	sxe_engine_set(e, "STRATEGY", "library", "OldApiStrategy");
 	CHECK(sxe_engine_setup(e) == SXE_ERR_SETUP && strstr(sxe_engine_error(e), "interface version") != NULL,
 	      "strategy built for another interface version: setup error with the reason");
 	sxe_engine_destroy(e);

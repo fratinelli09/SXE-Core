@@ -5,7 +5,12 @@
 #   cmake --build CMakeWork
 #   cmake --install CMakeWork          -> installs into Target/
 #
-# or ./comp_All.sh, which runs all three steps
+# or ./comp_All.sh, which runs all three steps (Linux).
+# Windows (Visual Studio 2022, from a "x64 Native Tools" prompt):
+#   cmake -S . -B CMakeWork -G Ninja -DCMAKE_BUILD_TYPE=Release
+#   cmake --build CMakeWork
+#   ctest --test-dir CMakeWork
+#   cmake --install CMakeWork
 #==========================================================
 cmake_minimum_required(VERSION 3.16)
 project(SXE VERSION 1.2.0 LANGUAGES CXX)
@@ -18,8 +23,20 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Tipo di build" FORCE)
 endif()
 
+# -ffp-contract=off: a*b+c is never fused into one instruction (FMA), so the results are
+# the same on every processor (MSVC does not fuse either)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -Wextra)
+    add_compile_options(-Wall -Wextra -ffp-contract=off)
+elseif(MSVC)
+    add_compile_options(/W3 /utf-8)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
+
+# Windows: the DLLs export all their functions like the .so on Linux (libSXE excepted), and
+# programs and DLLs are built in one folder so that the programs find the DLLs
+if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endif()
 
 # default install prefix: the project's runtime folder

@@ -11,4 +11,4 @@ target_include_directories(Common PUBLIC
 find_package(Threads REQUIRED)
 target_link_libraries(Common PUBLIC Threads::Threads)
 
-install(TARGETS Common LIBRARY DESTINATION ${SXE_BIN_DIR})
+install(TARGETS Common LIBRARY DESTINATION ${SXE_BIN_DIR} RUNTIME DESTINATION ${SXE_BIN_DIR} ARCHIVE DESTINATION ${SXE_BIN_DIR})

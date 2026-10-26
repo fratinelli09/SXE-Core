@@ -27,7 +27,11 @@ long long TimeUtils::Parse(const std::string& strTime)
 			if(n >= 11 && c4 == ':')
 				tm.tm_sec = s;
 		}
+#ifdef _WIN32
+		return static_cast<long long>(_mkgmtime(&tm));
+#else
 		return static_cast<long long>(timegm(&tm));
+#endif
 	}
 
 	char* end = nullptr;
@@ -42,7 +46,11 @@ std::string TimeUtils::Format(long long nTime)
 {
 	const std::time_t t = static_cast<std::time_t>(nTime);
 	std::tm tm{};
+#ifdef _WIN32
+	gmtime_s(&tm, &t);
+#else
 	gmtime_r(&t, &tm);
+#endif
 	char buf[32];
 	std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm);
 	return buf;

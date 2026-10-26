@@ -75,6 +75,10 @@ std::string CSettings::ResolvePath(const std::string& strPath, const std::string
     if (strPath == "~" || strPath.compare(0, 2, "~/") == 0)
     {
         const char* pszHome = std::getenv("HOME");
+#ifdef _WIN32
+        if (pszHome == nullptr)
+            pszHome = std::getenv("USERPROFILE");
+#endif
         p = fs::path(pszHome ? pszHome : "") / strPath.substr(strPath.size() > 1 ? 2 : 1);
     }
     else if (p.is_relative())
@@ -86,6 +90,17 @@ std::string CSettings::ResolvePath(const std::string& strPath, const std::string
     while (strOut.size() > 1 && strOut.back() == '/')
         strOut.pop_back();
     return strOut;
+}
+
+std::string CSettings::StrategyFileName(const std::string& strLibrary)
+{
+    if (strLibrary.empty() || strLibrary.find('.') != std::string::npos)
+        return strLibrary;
+#ifdef _WIN32
+    return "lib" + strLibrary + ".dll";
+#else
+    return "lib" + strLibrary + ".so";
+#endif
 }
 
 bool CSettings::Load(const std::string& strConfigFile, const std::string& strBaseDir_)
@@ -143,7 +158,9 @@ bool CSettings::_Load(CReader& ini)
     strategy.strFolder = _Resolve(strategy.strFolder);
     strategy.strConfig = _Resolve(strategy.strConfig);
 
-    if (bLibrary && strategy.strLibrary.find('/') != std::string::npos)
+    strategy.strLibrary = StrategyFileName(strategy.strLibrary);
+
+    if (bLibrary && strategy.strLibrary.find_first_of("/\\") != std::string::npos)
     {
         _AddError(Key(CFG_STRATEGY_SECTION, CFG_STRATEGY_LIBRARY) + " = '" + strategy.strLibrary +
                   "': give only the file name, the folder is " CFG_STRATEGY_FOLDER);

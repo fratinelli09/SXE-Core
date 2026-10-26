@@ -194,6 +194,8 @@ public:
 
     static std::string ResolvePath(const std::string& strPath, const std::string& strBaseDir);
 
+    static std::string StrategyFileName(const std::string& strLibrary);
+
     std::unique_ptr<CReader> getReader(std::string path, bool bCreateMissing = true) const
     {
         return std::make_unique<CReader>(path, bCreateMissing);

@@ -192,7 +192,11 @@ std::string Logger::_Now()
     const std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
     std::tm tm{};
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
     localtime_r(&t, &tm);
+#endif
 
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y%m%d_%H%M%S");

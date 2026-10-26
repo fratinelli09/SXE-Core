@@ -9,4 +9,4 @@ target_include_directories(Exchange PUBLIC
 
 target_link_libraries(Exchange PUBLIC Common)
 
-install(TARGETS Exchange LIBRARY DESTINATION ${SXE_BIN_DIR})
+install(TARGETS Exchange LIBRARY DESTINATION ${SXE_BIN_DIR} RUNTIME DESTINATION ${SXE_BIN_DIR} ARCHIVE DESTINATION ${SXE_BIN_DIR})

@@ -1,16 +1,21 @@
-# Builds SXE Core and runs the CTest tests on every push and pull request.
+# Builds SXE Core and runs the CTest tests on Linux and Windows on every push and pull request.
 #
-# The golden tests compare results to the cent with references generated on Linux arm64
-# with GCC 14. On arm64 GCC fuses multiply-add into one instruction (FMA), x86-64 does not:
-# the last digits of some results differ. So the tests run on the same platform and compiler:
-# an arm64 runner with Debian 13 (GCC 14).
+# The golden tests compare results to the cent with references generated on Linux arm64.
+# The build uses -ffp-contract=off (no fused multiply-add) and MSVC does not fuse either, so
+# the same references should hold on every platform.
+#
+# When a release is published, the Windows job also attaches a ready-to-use zip to it:
+# SXE.exe, SXE.dll + SXE.lib + sxe.h (C interface), the engine DLLs, the Template strategy,
+# the example configuration and the test data.
 
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, windows]
   pull_request:
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -29,3 +34,49 @@ jobs:
 
       - name: Build and test
         run: ./comp_All.sh test
+
+  windows:
+    name: Build and test (Windows x64, MSVC)
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Visual Studio environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        run: |
+          cmake -S . -B CMakeWork -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build CMakeWork
+
+      - name: Test
+        run: ctest --test-dir CMakeWork --output-on-failure
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $dist = "dist/SXE-Core"
+          cmake --install CMakeWork --prefix $dist
+          New-Item -ItemType Directory -Force "$dist/Include", "$dist/Data" | Out-Null
+          Copy-Item file/Api/Include/sxe.h "$dist/Include/"
+          Copy-Item file/Tests/Data/BTCUSDT_1h_2023_2024.csv, file/Tests/Data/BTCUSDT_funding_2023_2024.csv "$dist/Data/"
+          Copy-Item Target/Config/*.ini "$dist/Config/"
+          (Get-Content "$dist/Config/EngineConfig.ini") -replace '^data\s*=.*$', 'data   = ../Data' |
+              Set-Content "$dist/Config/EngineConfig.ini"
+          Copy-Item LICENSE, README.md "$dist/"
+          Compress-Archive -Path $dist -DestinationPath SXE-Core-windows-x64.zip
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: SXE-Core-windows-x64
+          path: SXE-Core-windows-x64.zip
+
+      - name: Attach the package to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" SXE-Core-windows-x64.zip --clobber

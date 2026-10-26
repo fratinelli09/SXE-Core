@@ -7,6 +7,12 @@
 #include <system_error>
 #include <thread>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
+
 #include "CEngine.h"
 #include "Logger.h"
 #include "Settings.h"
@@ -23,9 +29,15 @@ static void OnSignal(int)
 static std::string ExecutableDir(const char* pszArgv0)
 {
 	std::error_code ec;
+#ifdef _WIN32
+	wchar_t szPath[MAX_PATH * 4] = {};
+	const DWORD nLen = GetModuleFileNameW(nullptr, szPath, static_cast<DWORD>(sizeof(szPath) / sizeof(szPath[0])));
+	fs::path pExe = (nLen > 0) ? fs::path(szPath) : fs::absolute(pszArgv0, ec);
+#else
 	fs::path pExe = fs::read_symlink("/proc/self/exe", ec);
 	if(ec)
 		pExe = fs::absolute(pszArgv0, ec);
+#endif
 	return pExe.parent_path().string();
 }
 

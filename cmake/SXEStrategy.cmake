@@ -6,7 +6,8 @@
 #   include(<SXE folder>/cmake/SXEStrategy.cmake)
 #   sxe_add_strategy(NAME My SOURCES CMyStrategy.cpp CONFIG My.ini)
 #
-# Requires SXE already built (Target/Bin/libCommon.so, libSettings.so): headers
+# Requires SXE already built (Target/Bin/libCommon.so, libSettings.so; on Windows
+# Common.dll/.lib, Settings.dll/.lib): headers
 # are taken from file/, libraries from Target/Bin. The strategy is installed
 # into the SXE Target like the strategies inside the project.
 #==========================================================
@@ -14,7 +15,10 @@ if(NOT PROJECT_NAME STREQUAL "SXE")
     get_filename_component(SXE_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        add_compile_options(-Wall -Wextra)
+        add_compile_options(-Wall -Wextra -ffp-contract=off)
+    elseif(MSVC)
+        add_compile_options(/W3 /utf-8)
+        add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
     endif()
 
     set(CMAKE_CXX_STANDARD 17)
@@ -32,12 +36,19 @@ if(NOT PROJECT_NAME STREQUAL "SXE")
     set(SXE_CONFIG_DIR   Config)
 
     foreach(SXE_LIB Common Settings)
-        set(SXE_LIB_FILE "${SXE_ROOT}/Target/Bin/lib${SXE_LIB}.so")
+        if(WIN32)
+            set(SXE_LIB_FILE "${SXE_ROOT}/Target/Bin/${SXE_LIB}.dll")
+        else()
+            set(SXE_LIB_FILE "${SXE_ROOT}/Target/Bin/lib${SXE_LIB}.so")
+        endif()
         if(NOT EXISTS "${SXE_LIB_FILE}")
-            message(FATAL_ERROR "${SXE_LIB_FILE} not found: build SXE first (${SXE_ROOT}/comp_All.sh)")
+            message(FATAL_ERROR "${SXE_LIB_FILE} not found: build and install SXE first")
         endif()
         add_library(SXE_${SXE_LIB} SHARED IMPORTED)
         set_target_properties(SXE_${SXE_LIB} PROPERTIES IMPORTED_LOCATION "${SXE_LIB_FILE}")
+        if(WIN32)
+            set_target_properties(SXE_${SXE_LIB} PROPERTIES IMPORTED_IMPLIB "${SXE_ROOT}/Target/Bin/${SXE_LIB}.lib")
+        endif()
     endforeach()
 
     add_library(SDK INTERFACE)
@@ -56,7 +67,7 @@ endif()
 #                    SOURCES CTemplateStrategy.cpp
 #                    CONFIG  Template.ini)
 #
-# produces lib<NAME>.so, installs it into Target/Bin/Strategies and copies CONFIG into
+# produces lib<NAME>.so (Windows: lib<NAME>.dll), installs it into Target/Bin/Strategies and copies CONFIG into
 # Target/Config only if not already there. Only the SXE_* functions are exported.
 #==========================================================
 function(sxe_add_strategy)
