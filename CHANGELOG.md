@@ -6,7 +6,10 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
-## 1.2.0 - in development
+## 1.2.0 - 2026-10-26
+
+The strategy interface does not change (`SXE_API_VERSION` 3): strategies built for 1.1.0
+work without being rebuilt. Same results as 1.1.0: the golden references are unchanged.
 
 ### Engine usable from other programs (first step towards the C library)
 

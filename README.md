@@ -9,7 +9,7 @@ data step by step and executes its orders on a simulated exchange that reproduce
 of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.1.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
+Version 1.2.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
 Italian version: [README_IT.md](README_IT.md)
 
 

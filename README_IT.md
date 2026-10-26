@@ -9,7 +9,7 @@ dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le rego
 vero: ordini a mercato e limite, commissioni taker e maker, slippage, margine
 isolated/crossed, margine di mantenimento a scaglioni, funding ogni 8 ore e liquidazione.
 
-Versione 1.1.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
+Versione 1.2.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
 English version: [README.md](README.md)
 
 
