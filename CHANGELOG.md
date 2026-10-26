@@ -6,6 +6,19 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
+## 1.2.0 - in development
+
+### Engine usable from other programs (first step towards the C library)
+
+- Several engines can run in the same process, each in its own thread: `CEngine` takes
+  its own `Logger` (until now there was one per process), `run_here()` runs the loop in
+  the calling thread and `GetResult()` returns the summary numbers as a `SimResult`.
+- `EngineOptions` turns off the cycle archive, the state file and the order log, for runs
+  that only need the numbers.
+- `CSettings::SetOutputFolders()` moves the output of a run to other folders.
+- New tests `multirun_golden_template` and `multirun_golden_isolated` (19 in total).
+- Next: a C interface (`sxe.h`, `libSXE.so`) to embed the engine in other applications.
+
 ## 1.1.0 - 2026-10-23
 
 ### Limit orders

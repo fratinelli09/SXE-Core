@@ -11,19 +11,57 @@
 #include "Settings.h"
 #include "ThreadBase.h"
 
+struct SimResult
+{
+	bool        bFinished           = false;
+	bool        bError              = false;
+	std::string strReason;
+	long long   nFirstTime          = 0;
+	long long   nLastTime           = 0;
+	double      dInitialCapital     = 0;
+	double      dFinalEquity        = 0;
+	double      dReturn             = 0;
+	double      dMaxDrawdown        = 0;
+	long long   nCycles             = 0;
+	long long   nWins               = 0;
+	long long   nLiquidations       = 0;
+	long long   nOrders             = 0;
+	long long   nRejected           = 0;
+	double      dFees               = 0;
+	double      dFunding            = 0;
+	double      dWorstCycleDrawdown = 0;
+	double      dMaxLeverage        = 0;
+	bool        bOpenAtEnd          = false;
+	long long   nUnderwater         = 0;
+	long long   nSteps              = 0;
+	double      dSeconds            = 0;
+};
+
+struct EngineOptions
+{
+	bool bArchive   = true;
+	bool bStateFile = true;
+	bool bOrderLog  = true;
+};
+
 class CEngine : public ThreadBase
 {
 public:
-	CEngine();
+	explicit CEngine(Logger& logger = Logger::Get());
 	~CEngine() override;
 
-	bool Setup(const CSettings& settings);
+	bool Setup(const CSettings& settings, const EngineOptions& options = EngineOptions());
 
 	void run() override;
 
 	int ExitCode() const { return nExitCode; }
 
+	const SimResult& GetResult() const { return result; }
+
 	void RequestStop() { bStopRequested = true; }
+
+protected:
+	Logger& _log() override { return logger; }
 
 private:
 	class COrderRouter : public IOrders
@@ -73,12 +111,14 @@ private:
 	bool              bStrategyStarted;
 	bool              bArchiveOpenCycle;
 	bool              bSaveNow;
+	bool              bStateFile;
 	bool              bResumed;
 	bool              bLiquidation;
 	bool              bUnderwater;
 	long long         nUnderwater;
 	long long         nOrdersVersion;
 	int               nExitCode;
+	SimResult         result;
 
 	long long         nStartStep;
 	double            dPeakEquity;

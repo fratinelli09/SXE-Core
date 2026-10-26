@@ -1,5 +1,6 @@
 #include "CEngine.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
@@ -22,11 +23,11 @@ namespace
 	const long long STATUS_EVERY_STEPS = 5000;
 }
 
-CEngine::CEngine():
-	logger(Logger::Get()),
+CEngine::CEngine(Logger& log):
+	logger(log),
 	pStrategy(nullptr),
 	orderRouter(*this),
-	ctx{0, 0, 0, 0, Candle(), false, Account(), Position(), false, {}, {}, orderRouter, Logger::Get()},
+	ctx{0, 0, 0, 0, Candle(), false, Account(), Position(), false, {}, {}, orderRouter, log},
 	step(),
 	bConsole(false),
 	dInitialCapital(0),
@@ -36,6 +37,7 @@ CEngine::CEngine():
 	bStrategyStarted(false),
 	bArchiveOpenCycle(false),
 	bSaveNow(false),
+	bStateFile(true),
 	bResumed(false),
 	bLiquidation(true),
 	bUnderwater(false),
@@ -55,9 +57,10 @@ CEngine::~CEngine()
 	wait();
 }
 
-bool CEngine::Setup(const CSettings& settings)
+bool CEngine::Setup(const CSettings& settings, const EngineOptions& options)
 {
-	bConsole = settings.log.nConsole != 0;
+	bConsole   = settings.log.nConsole != 0;
+	bStateFile = options.bStateFile;
 
 	if(!settings.bSimulate)
 	{
@@ -159,13 +162,13 @@ bool CEngine::Setup(const CSettings& settings)
 	            Num(settings.exchange.dMaintenanceMargin * 100, 2) + "% up to " +
 	            Num(settings.exchange.vMaintenanceTiers.empty() ? 0 : settings.exchange.vMaintenanceTiers.front().first, 0) + " USDT)");
 
-	if(!pExchange->SetOrderLog(settings.sim.strOrderLog, settings.sim.nResume != 0))
+	if(options.bOrderLog && !pExchange->SetOrderLog(settings.sim.strOrderLog, settings.sim.nResume != 0))
 	{
 		logger.Error("Order log cannot be written: " + settings.sim.strOrderLog);
 		return false;
 	}
 
-	if(!archive.Setup(settings.path.strLog, settings.path.strBackup, {strStateFile}, strError))
+	if(!archive.Setup(settings.path.strLog, settings.path.strBackup, {strStateFile}, strError, options.bArchive))
 	{
 		logger.Error(strError);
 		return false;
@@ -259,6 +262,9 @@ bool CEngine::_Resume(const CSettings& settings)
 
 void CEngine::_SaveState()
 {
+	if(!bStateFile)
+		return;
+
 	SimState state;
 	state.strDataFile  = strDataFile;
 	state.strStrategy  = strStrategyName;
@@ -514,6 +520,36 @@ void CEngine::_Finish(bool bError, const std::string& strReason)
 	if(bConsole)
 		std::cout << strSummary << std::endl;
 	archive.WriteNote(strSummary);
+
+	const CCycleArchive::Totals& totals = archive.GetTotals();
+	result.bFinished           = true;
+	result.bError              = bError;
+	result.strReason           = strReason;
+	result.nFirstTime          = pFeed->FirstTime();
+	result.nLastTime           = pFeed->LastTime();
+	result.dInitialCapital     = dInitialCapital;
+	result.dFinalEquity        = account.dEquity;
+	result.dReturn             = dReturn;
+	result.dMaxDrawdown        = dMaxDrawdown;
+	result.nCycles             = stats.nClosed;
+	result.nWins               = stats.nWins;
+	result.nLiquidations       = stats.nLiquidations;
+	result.nOrders             = stats.nOrders;
+	result.nRejected           = stats.nRejected;
+	result.dFees               = stats.dFeesPaid;
+	result.dFunding            = stats.dFundingPaid;
+	result.dWorstCycleDrawdown = totals.dWorstDrawdown;
+	result.dMaxLeverage        = totals.dMaxLeverage;
+	result.bOpenAtEnd          = pExchange->GetPosition().bOpen;
+	result.nUnderwater         = nUnderwater;
+	result.nSteps              = nSteps;
+	result.dSeconds            = dSec;
+	if(archive.IsOpen())
+	{
+		const CCycleArchive::Snapshot open = archive.GetSnapshot();
+		result.dWorstCycleDrawdown = std::min(result.dWorstCycleDrawdown, open.dMinEquityPerc);
+		result.dMaxLeverage        = std::max(result.dMaxLeverage, open.dMaxLeverage);
+	}
 
 	ThreadBase::stop();
 }

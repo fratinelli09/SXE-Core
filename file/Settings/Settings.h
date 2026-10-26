@@ -176,6 +176,8 @@ public:
 
     bool CreateOutputFolders();
 
+    void SetOutputFolders(const std::string& strLogDir, const std::string& strBackupDir);
+
     bool IsValid() const                            { return bValid; }
     const std::vector<std::string>& GetErrors() const { return vErrors; }
     std::string GetFilePath() const                 { return strFilePath; }

@@ -207,7 +207,17 @@ foreach(LIMIT_FILL through touch)
                      -P ${SXE_TEST_SCRIPT})
 endforeach()
 
-#--- 4. speed (measurement only) ---------------------------------------------
+#--- 4. several engines in one process ---------------------------------------
+# full run = light run (no files) = N light runs in parallel, same numbers
+add_executable(SxeMultiRunTest MultiRun/SxeMultiRunTest.cpp)
+target_link_libraries(SxeMultiRunTest PRIVATE Engine)
+
+foreach(MULTI_TEST golden_template golden_isolated)
+    add_test(NAME multirun_${MULTI_TEST}
+             COMMAND SxeMultiRunTest ${TEST_DIR}/${MULTI_TEST}.ini ${TEST_DIR}/multirun_${MULTI_TEST} 4)
+endforeach()
+
+#--- 5. speed (measurement only) ---------------------------------------------
 sxe_test_config(benchmark LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini)
 add_test(NAME benchmark

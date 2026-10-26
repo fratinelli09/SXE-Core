@@ -64,7 +64,7 @@ About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles 
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-17 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+19 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
 run by GitHub Actions on every push (Linux arm64, GCC 14).
 
 
@@ -265,7 +265,7 @@ is false the run starts from scratch and any state left by a previous run must b
 
 ## Tests
 
-`./comp_All.sh test` runs 17 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
+`./comp_All.sh test` runs 19 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
 funding, 2023-2024) and on a few hand-made candles:
 
 | Test | Checks |
@@ -286,6 +286,8 @@ funding, 2023-2024) and on a few hand-made candles:
 | `resume_limit` | the same with open limit orders |
 | `limit_through` | hand-made candles: a limit only touched is not filled, one gone through by a tick is filled at its price with the maker fee |
 | `limit_touch` | the same with `limit_fill = touch`: filled as soon as it is touched |
+| `multirun_golden_template` | several engines in one process: a full run, a run that writes no files and 4 runs in parallel give the same numbers |
+| `multirun_golden_isolated` | the same with liquidations |
 | `benchmark` | steps per second (measurement only) |
 
 Golden tests compare every cycle with the references in `file/Tests/Golden`: any change to

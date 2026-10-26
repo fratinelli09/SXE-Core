@@ -329,6 +329,14 @@ bool CSettings::CreateOutputFolders()
     return bOk;
 }
 
+void CSettings::SetOutputFolders(const std::string& strLogDir, const std::string& strBackupDir)
+{
+    path.strLog    = strLogDir;
+    path.strBackup = strBackupDir;
+    sim.strStateFile = (fs::path(strLogDir) / fs::path(sim.strStateFile).filename()).string();
+    sim.strOrderLog  = (fs::path(strLogDir) / fs::path(sim.strOrderLog).filename()).string();
+}
+
 bool CSettings::_Required(CReader& ini, const char* pszSection, const char* pszKey, std::string& strValue)
 {
     if (!ini.Has(pszSection, pszKey) || !ini.Get(pszSection, pszKey, strValue) || strValue.empty())

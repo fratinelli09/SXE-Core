@@ -30,6 +30,7 @@ namespace
 }
 
 CCycleArchive::CCycleArchive():
+	bWrite(true),
 	nCycle(1),
 	bOpen(false),
 	nOpenTime(0),
@@ -42,12 +43,20 @@ CCycleArchive::CCycleArchive():
 }
 
 bool CCycleArchive::Setup(const std::string& strLog, const std::string& strBackup,
-                          const std::vector<std::string>& vKeepFiles, std::string& strError)
+                          const std::vector<std::string>& vKeepFiles, std::string& strError, bool bWriteFiles)
 {
 	strLogDir    = strLog;
 	strBackupDir = strBackup;
 	strTotalFile = strBackupDir + "/" TOTAL_RESULT_FILE;
 	vKeep        = vKeepFiles;
+	bWrite       = bWriteFiles;
+	totals       = Totals();
+
+	if(!bWrite)
+	{
+		nCycle = 1;
+		return true;
+	}
 
 	long long nMax = 0;
 	std::error_code ec;
@@ -82,6 +91,8 @@ bool CCycleArchive::Setup(const std::string& strLog, const std::string& strBacku
 
 void CCycleArchive::WriteNote(const std::string& strNote)
 {
+	if(!bWrite)
+		return;
 	std::ofstream total(strTotalFile, std::ios::app);
 	total << "# " << strNote << "\n";
 }
@@ -121,6 +132,19 @@ std::string CCycleArchive::Close(long long nTime, double dExitPrice, const Posit
 	const double dGrowth = (dWalletStart > 0) ? (dWalletAfter - dWalletStart) / dWalletStart * 100.0 : 0;
 	const double dFees   = positionBefore.dFeesPaid + dCloseFee;
 
+	++totals.nCycles;
+	totals.dWorstDrawdown = std::min(totals.dWorstDrawdown, dMinEquityPerc);
+	totals.dMaxLeverage   = std::max(totals.dMaxLeverage, dMaxLeverage);
+	totals.dHours        += (nTime - nOpenTime) / 3600.0;
+
+	const std::string strSummary = "Cycle " + std::to_string(nCycle) + " closed (" + strReason + "): capital " +
+	                               Num(dWalletStart) + " -> " + Num(dWalletAfter) + " (" + Num(dGrowth) + "%), buys " +
+	                               std::to_string(nBuys) + ", drawdown max " + Num(dMinEquityPerc) + "%, max leverage " +
+	                               Num(dMaxLeverage);
+	bOpen = false;
+	if(!bWrite)
+		return strSummary;
+
 	strCycleDir = strBackupDir + "/" CYCLE_DIR_PREFIX + std::to_string(nCycle);
 	std::error_code ec;
 	fs::create_directories(strCycleDir, ec);
@@ -157,16 +181,17 @@ std::string CCycleArchive::Close(long long nTime, double dExitPrice, const Posit
 			strError = "Cannot update " + strTotalFile;
 	}
 
-	const std::string strSummary = "Cycle " + std::to_string(nCycle) + " closed (" + strReason + "): capital " +
-	                               Num(dWalletStart) + " -> " + Num(dWalletAfter) + " (" + Num(dGrowth) + "%), buys " +
-	                               std::to_string(nBuys) + ", drawdown max " + Num(dMinEquityPerc) + "%, max leverage " +
-	                               Num(dMaxLeverage);
-	bOpen = false;
 	return strSummary;
 }
 
 bool CCycleArchive::MoveLogFiles(std::string& strError)
 {
+	if(!bWrite)
+	{
+		++nCycle;
+		return true;
+	}
+
 	bool bOk = true;
 	std::error_code ec;
 

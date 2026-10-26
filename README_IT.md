@@ -66,7 +66,7 @@ Circa 700.000 passi al secondo su un Raspberry Pi 4: due anni di candele da 1 or
 dentro la candela girano in 0,2 secondi.
 
 ### Testato
-17 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
+19 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
 mano, eseguiti da GitHub Actions a ogni push (Linux arm64, GCC 14).
 
 
@@ -267,7 +267,7 @@ Una strategia che salva un suo stato (per esempio accanto al suo `.ini`) lo rica
 
 ## Test
 
-`./comp_All.sh test` lancia 17 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
+`./comp_All.sh test` lancia 19 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
 funding, 2023-2024) e su poche candele costruite a mano:
 
 | Test | Verifica |
@@ -288,6 +288,8 @@ funding, 2023-2024) e su poche candele costruite a mano:
 | `resume_limit` | lo stesso con ordini limite aperti |
 | `limit_through` | candele costruite a mano: un limite solo toccato non viene eseguito, uno superato di un tick sì al suo prezzo con la commissione maker |
 | `limit_touch` | lo stesso con `limit_fill = touch`: eseguito appena toccato |
+| `multirun_golden_template` | più motori nello stesso processo: una corsa completa, una che non scrive file e 4 in parallelo danno gli stessi numeri |
+| `multirun_golden_isolated` | lo stesso con le liquidazioni |
 | `benchmark` | passi al secondo (solo misura) |
 
 I test golden confrontano ogni ciclo con i riferimenti in `file/Tests/Golden`: qualsiasi

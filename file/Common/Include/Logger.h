@@ -18,6 +18,8 @@ class Logger
 public:
 	static Logger& Get();
 
+	Logger();
+
 	void SetLogDir(const std::string& strDir);
 
 	void SetEnabled(LogLevel level, bool bEnabled);
@@ -27,6 +29,8 @@ public:
 	void SetEngineTime(long long nTime) { nEngineTime = nTime; }
 
 	void SetContext(const std::string& strContext);
+
+	void SetEcho(bool bEcho);
 
 	void Info(const std::string& strMsg);
 	void Warning(const std::string& strMsg);
@@ -38,7 +42,6 @@ public:
 	void ClearOnce();
 
 private:
-	Logger();
 	Logger(const Logger&) = delete;
 	Logger& operator=(const Logger&) = delete;
 
@@ -52,6 +55,7 @@ private:
 	std::string strLogFile;
 	std::string strErrorFile;
 	bool bEnabled[3];
+	bool bEcho;
 	std::atomic<long long> nEngineTime;
 	std::string strContext;
 	std::string strLastOnce;

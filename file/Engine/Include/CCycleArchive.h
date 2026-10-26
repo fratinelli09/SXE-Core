@@ -18,11 +18,19 @@ public:
 		double    dMaxLeverage   = 0;
 	};
 
+	struct Totals
+	{
+		long long nCycles        = 0;
+		double    dWorstDrawdown = 0;
+		double    dMaxLeverage   = 0;
+		double    dHours         = 0;
+	};
+
 public:
 	CCycleArchive();
 
 	bool Setup(const std::string& strLogDir, const std::string& strBackupDir,
-	           const std::vector<std::string>& vKeep, std::string& strError);
+	           const std::vector<std::string>& vKeep, std::string& strError, bool bWrite = true);
 
 	long long CurrentCycle() const { return nCycle; }
 	bool IsOpen() const { return bOpen; }
@@ -40,12 +48,16 @@ public:
 	Snapshot GetSnapshot() const;
 	void Restore(const Snapshot& snapshot);
 
+	const Totals& GetTotals() const { return totals; }
+
 private:
 	std::string strLogDir;
 	std::string strBackupDir;
 	std::string strTotalFile;
 	std::string strCycleDir;
 	std::vector<std::string> vKeep;
+	bool      bWrite;
+	Totals    totals;
 
 	long long nCycle;
 	bool      bOpen;

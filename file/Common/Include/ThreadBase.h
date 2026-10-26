@@ -23,12 +23,24 @@ public:
 	{
 		if(_bInitFailed)
 		{
-			Logger::Get().Error("Initialization failed, thread not started (see the previous errors)");
+			_log().Error("Initialization failed, thread not started (see the previous errors)");
 			return;
 		}
 
 		_bAlive = true;
 		_thread = std::async(std::launch::async, &ThreadBase::_loopExec, this);
+	}
+
+	void run_here()
+	{
+		if(_bInitFailed)
+		{
+			_log().Error("Initialization failed, loop not started (see the previous errors)");
+			return;
+		}
+
+		_bAlive = true;
+		_loopExec();
 	}
 
 	void stop()
@@ -52,6 +64,8 @@ public:
 	bool is_alive() const { return _bAlive; }
 
 protected:
+	virtual Logger& _log() { return Logger::Get(); }
+
 	void _loopExec()
 	{
 		try
@@ -63,11 +77,11 @@ protected:
 		}
 		catch(const std::exception& e)
 		{
-			Logger::Get().Error(std::string("Exception in the main loop, thread stopped: ") + e.what());
+			_log().Error(std::string("Exception in the main loop, thread stopped: ") + e.what());
 		}
 		catch(...)
 		{
-			Logger::Get().Error("Unknown exception in the main loop, thread stopped");
+			_log().Error("Unknown exception in the main loop, thread stopped");
 		}
 		_bAlive = false;
 	}

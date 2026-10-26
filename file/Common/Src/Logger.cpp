@@ -18,6 +18,7 @@ Logger::Logger():
     strLogFile(LOG_FILE_NAME),
     strErrorFile(LOG_ERROR_FILE_NAME),
     bEnabled{true, true, true},
+    bEcho(true),
     nEngineTime(0),
     strContext(),
     strLastOnce(),
@@ -65,6 +66,12 @@ void Logger::SetContext(const std::string& strNewContext)
 {
     std::lock_guard<std::mutex> lock(mtx);
     strContext = strNewContext;
+}
+
+void Logger::SetEcho(bool bNewEcho)
+{
+    std::lock_guard<std::mutex> lock(mtx);
+    bEcho = bNewEcho;
 }
 
 void Logger::Info(const std::string& strMsg)
@@ -152,6 +159,8 @@ void Logger::_Write(LogLevel level, const std::string& strMsg)
         file << strLine << "\n";
     }
 
+    if(!bEcho)
+        return;
     if(level == LogLevel::Error)
         std::cerr << "\n[ERROR] " << strMsg << std::endl;
     else if(level == LogLevel::Warning)
