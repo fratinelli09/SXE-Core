@@ -19,6 +19,8 @@ Logger::Logger():
     strErrorFile(LOG_ERROR_FILE_NAME),
     bEnabled{true, true, true},
     bEcho(true),
+    bFiles(true),
+    fnSink(),
     nEngineTime(0),
     strContext(),
     strLastOnce(),
@@ -72,6 +74,18 @@ void Logger::SetEcho(bool bNewEcho)
 {
     std::lock_guard<std::mutex> lock(mtx);
     bEcho = bNewEcho;
+}
+
+void Logger::SetFiles(bool bNewFiles)
+{
+    std::lock_guard<std::mutex> lock(mtx);
+    bFiles = bNewFiles;
+}
+
+void Logger::SetSink(std::function<void(LogLevel, const std::string&)> fnNewSink)
+{
+    std::lock_guard<std::mutex> lock(mtx);
+    fnSink = std::move(fnNewSink);
 }
 
 void Logger::Info(const std::string& strMsg)
@@ -148,16 +162,22 @@ void Logger::_Write(LogLevel level, const std::string& strMsg)
         strLine += strContext + " | ";
     strLine += strMsg;
 
+    if(bFiles)
     {
-        std::ofstream file(strLogFile, std::ios::app);
-        file << strLine << "\n";
+        {
+            std::ofstream file(strLogFile, std::ios::app);
+            file << strLine << "\n";
+        }
+
+        if(level == LogLevel::Error)
+        {
+            std::ofstream file(strErrorFile, std::ios::app);
+            file << strLine << "\n";
+        }
     }
 
-    if(level == LogLevel::Error)
-    {
-        std::ofstream file(strErrorFile, std::ios::app);
-        file << strLine << "\n";
-    }
+    if(fnSink)
+        fnSink(level, strMsg);
 
     if(!bEcho)
         return;

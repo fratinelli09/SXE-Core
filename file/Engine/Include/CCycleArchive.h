@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,25 @@ public:
 		double    dHours         = 0;
 	};
 
+	struct CycleRow
+	{
+		long long   nCycle        = 0;
+		long long   nOpenTime     = 0;
+		long long   nCloseTime    = 0;
+		double      dCapitalStart = 0;
+		double      dCapitalEnd   = 0;
+		double      dGrowth       = 0;
+		double      dDrawdown     = 0;
+		double      dMaxLeverage  = 0;
+		int         nBuys         = 0;
+		double      dEntryPrice   = 0;
+		double      dAvgPrice     = 0;
+		double      dExitPrice    = 0;
+		double      dFees         = 0;
+		double      dFunding      = 0;
+		std::string strClosedBy;
+	};
+
 public:
 	CCycleArchive();
 
@@ -50,6 +70,8 @@ public:
 
 	const Totals& GetTotals() const { return totals; }
 
+	void SetCycleCallback(std::function<void(const CycleRow&)> fnCallback) { fnCycle = std::move(fnCallback); }
+
 private:
 	std::string strLogDir;
 	std::string strBackupDir;
@@ -58,6 +80,7 @@ private:
 	std::vector<std::string> vKeep;
 	bool      bWrite;
 	Totals    totals;
+	std::function<void(const CycleRow&)> fnCycle;
 
 	long long nCycle;
 	bool      bOpen;

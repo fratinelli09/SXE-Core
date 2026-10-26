@@ -217,7 +217,35 @@ foreach(MULTI_TEST golden_template golden_isolated)
              COMMAND SxeMultiRunTest ${TEST_DIR}/${MULTI_TEST}.ini ${TEST_DIR}/multirun_${MULTI_TEST} 4)
 endforeach()
 
-#--- 5. speed (measurement only) ---------------------------------------------
+#--- 5. C interface (libSXE.so, sxe.h), from programs written in C ----------
+enable_language(C)
+foreach(API_PROGRAM SxeApiRun SxeApiTest)
+    add_executable(${API_PROGRAM} Api/${API_PROGRAM}.c)
+    target_link_libraries(${API_PROGRAM} PRIVATE SXEApi)
+    set_target_properties(${API_PROGRAM} PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
+endforeach()
+
+# a run through the C interface gives the same cycles as the SXE program
+sxe_test_config(api_golden_template LIBRARY libTemplate.so FOLDER ${TEMPLATE_DIR} STRATEGY_CONFIG ${TEMPLATE_CONFIG})
+sxe_test_config(api_golden_isolated LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
+sxe_test_config(api_golden_limit LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini)
+foreach(API_TEST template isolated limit)
+    add_test(NAME api_golden_${API_TEST}
+             COMMAND ${CMAKE_COMMAND} -DMODE=GOLDEN -DSXE=$<TARGET_FILE:SxeApiRun>
+                     -DCONFIG=${TEST_DIR}/api_golden_${API_TEST}.ini -DDIR=${TEST_DIR}/api_golden_${API_TEST}
+                     -DGOLDEN=${SXE_TEST_GOLDEN}/golden_${API_TEST}.txt -P ${SXE_TEST_SCRIPT})
+endforeach()
+
+# callbacks, options, configuration without files, errors
+sxe_test_config(api_checks LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
+add_test(NAME api_checks
+         COMMAND SxeApiTest ${TEST_DIR}/api_checks.ini ${TEST_DIR}/api_checks ${TEST_DIR} libTestStrategy.so
+                 ${TEST_DIR}/TestStrategy_lev10.ini ${SXE_TEST_SOURCE_DIR}/Data)
+
+#--- 6. speed (measurement only) ---------------------------------------------
 sxe_test_config(benchmark LIBRARY libTestStrategy.so FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini)
 add_test(NAME benchmark

@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <functional>
 #include <string>
 #include <mutex>
 
@@ -32,6 +33,10 @@ public:
 
 	void SetEcho(bool bEcho);
 
+	void SetFiles(bool bFiles);
+
+	void SetSink(std::function<void(LogLevel, const std::string&)> fnSink);
+
 	void Info(const std::string& strMsg);
 	void Warning(const std::string& strMsg);
 	void Error(const std::string& strMsg);
@@ -56,6 +61,8 @@ private:
 	std::string strErrorFile;
 	bool bEnabled[3];
 	bool bEcho;
+	bool bFiles;
+	std::function<void(LogLevel, const std::string&)> fnSink;
 	std::atomic<long long> nEngineTime;
 	std::string strContext;
 	std::string strLastOnce;

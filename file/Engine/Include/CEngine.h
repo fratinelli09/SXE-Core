@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -37,11 +38,25 @@ struct SimResult
 	double      dSeconds            = 0;
 };
 
+struct ProgressInfo
+{
+	long long nTime     = 0;
+	long long nStep     = 0;
+	long long nCycle    = 0;
+	double    dPrice    = 0;
+	double    dEquity   = 0;
+	double    dDrawdown = 0;
+};
+
 struct EngineOptions
 {
 	bool bArchive   = true;
 	bool bStateFile = true;
 	bool bOrderLog  = true;
+
+	long long nProgressEvery = 0;
+	std::function<void(const ProgressInfo&)>            fnProgress;
+	std::function<void(const CCycleArchive::CycleRow&)> fnCycle;
 };
 
 class CEngine : public ThreadBase
@@ -112,6 +127,8 @@ private:
 	bool              bArchiveOpenCycle;
 	bool              bSaveNow;
 	bool              bStateFile;
+	long long         nProgressEvery;
+	std::function<void(const ProgressInfo&)> fnProgress;
 	bool              bResumed;
 	bool              bLiquidation;
 	bool              bUnderwater;

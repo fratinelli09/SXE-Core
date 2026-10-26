@@ -38,6 +38,8 @@ CEngine::CEngine(Logger& log):
 	bArchiveOpenCycle(false),
 	bSaveNow(false),
 	bStateFile(true),
+	nProgressEvery(0),
+	fnProgress(),
 	bResumed(false),
 	bLiquidation(true),
 	bUnderwater(false),
@@ -61,6 +63,9 @@ bool CEngine::Setup(const CSettings& settings, const EngineOptions& options)
 {
 	bConsole   = settings.log.nConsole != 0;
 	bStateFile = options.bStateFile;
+	nProgressEvery = options.nProgressEvery;
+	fnProgress     = options.fnProgress;
+	archive.SetCycleCallback(options.fnCycle);
 
 	if(!settings.bSimulate)
 	{
@@ -335,6 +340,18 @@ void CEngine::run()
 		dPeakEquity = dEquity;
 	else if(dPeakEquity > 0 && (dEquity / dPeakEquity - 1.0) * 100.0 < dMaxDrawdown)
 		dMaxDrawdown = (dEquity / dPeakEquity - 1.0) * 100.0;
+
+	if(fnProgress && nProgressEvery > 0 && ctx.nStep % nProgressEvery == 0)
+	{
+		ProgressInfo progress;
+		progress.nTime     = ctx.nTime;
+		progress.nStep     = ctx.nStep;
+		progress.nCycle    = ctx.nCycle;
+		progress.dPrice    = ctx.dPrice;
+		progress.dEquity   = dEquity;
+		progress.dDrawdown = (dPeakEquity > 0) ? (dEquity / dPeakEquity - 1.0) * 100.0 : 0;
+		fnProgress(progress);
+	}
 
 	if(bSaveNow || (step.bCandleClosed && pFeed->CandlesDone() % static_cast<size_t>(nSaveEvery) == 0))
 	{

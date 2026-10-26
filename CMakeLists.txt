@@ -44,6 +44,7 @@ add_subdirectory(file/SDK)
 add_subdirectory(file/DataFeed)
 add_subdirectory(file/Exchange)
 add_subdirectory(file/Engine)
+add_subdirectory(file/Api)
 add_subdirectory(file/App)
 
 # strategies: every folder of file/Strategies with a CMakeLists.txt is built,

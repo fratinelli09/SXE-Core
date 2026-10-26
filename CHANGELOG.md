@@ -17,7 +17,19 @@ the engine refuses strategies built for a different one.
   that only need the numbers.
 - `CSettings::SetOutputFolders()` moves the output of a run to other folders.
 - New tests `multirun_golden_template` and `multirun_golden_isolated` (19 in total).
-- Next: a C interface (`sxe.h`, `libSXE.so`) to embed the engine in other applications.
+
+### C interface: libSXE.so
+
+- New library `libSXE.so` with the C interface `file/Api/Include/sxe.h`: create an engine,
+  configure it from `EngineConfig.ini` and/or key by key, run it, read the result. Callbacks
+  for log messages, progress and closed cycles; options to turn off the engine files;
+  `sxe_engine_stop()` from any thread. Only the `sxe_` functions are exported.
+- `CSettings::LoadText()`: configuration from text instead of a file.
+- `Logger`: log files can be turned off, messages can be passed to a callback.
+- New tests: `api_golden_template`, `api_golden_isolated`, `api_golden_limit` (golden runs
+  through the C interface from a C program) and `api_checks` (23 in total).
+- Tests: the comparison of resumed runs skipped the cycle open at the end by its old Italian
+  description; messages of the test script in English.
 
 ## 1.1.0 - 2026-10-23
 

@@ -75,7 +75,14 @@ public:
     explicit CReader(const std::string& path, bool bCreateMissing = true):
         strpath(path),
         bCreate(bCreateMissing),
+        bMemory(false),
         ini(path)
+    {}
+    CReader(const char* pszBuffer, size_t nSize):
+        strpath(),
+        bCreate(false),
+        bMemory(true),
+        ini(pszBuffer, nSize)
     {}
     ~CReader(){}
 
@@ -100,6 +107,7 @@ private:
 
     std::string strpath;
     bool        bCreate;
+    bool        bMemory;
     INIReader   ini;
 };
 
@@ -174,6 +182,8 @@ public:
 
     bool Load(const std::string& strConfigFile, const std::string& strBaseDir);
 
+    bool LoadText(const std::string& strText, const std::string& strName, const std::string& strBaseDir);
+
     bool CreateOutputFolders();
 
     void SetOutputFolders(const std::string& strLogDir, const std::string& strBackupDir);
@@ -201,6 +211,8 @@ public:
 
 private:
     void _AddError(const std::string& strError) { vErrors.push_back(strError); }
+
+    bool _Load(CReader& ini);
 
     bool _Required(CReader& ini, const char* pszSection, const char* pszKey, std::string& strValue);
     void _Optional(CReader& ini, const char* pszSection, const char* pszKey, std::string& strValue);

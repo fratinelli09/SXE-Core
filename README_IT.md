@@ -61,12 +61,16 @@ si indica per mese (2023-01 -> 2025-10) o per giorno, con un avviso se i dati no
 ### Configurazione rigorosa
 Ogni chiave viene controllata all'avvio e gli errori vengono segnalati tutti insieme.
 
+### Incorporabile
+Lo stesso motore è anche una libreria condivisa con interfaccia C (`libSXE.so`, `sxe.h`), per
+usarlo da altri programmi e linguaggi: vedi [Usare SXE Core come libreria](#usare-sxe-core-come-libreria).
+
 ### Veloce
 Circa 700.000 passi al secondo su un Raspberry Pi 4: due anni di candele da 1 ora con i tick
 dentro la candela girano in 0,2 secondi.
 
 ### Testato
-19 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
+23 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
 mano, eseguiti da GitHub Actions a ogni push (Linux arm64, GCC 14).
 
 
@@ -242,6 +246,60 @@ Una strategia che salva un suo stato (per esempio accanto al suo `.ini`) lo rica
 è false la corsa parte da capo e lo stato lasciato da una corsa precedente va ignorato.
 
 
+## Usare SXE Core come libreria
+
+Oltre al programma `SXE`, la build produce `libSXE.so`: lo stesso motore dietro
+un'interfaccia C, [`file/Api/Include/sxe.h`](file/Api/Include/sxe.h), usabile da qualunque
+linguaggio sappia chiamare funzioni C (C, C++ con qualsiasi compilatore, Python, C#, Rust, ...).
+
+```c
+#include <stdio.h>
+#include "sxe.h"
+
+static void on_cycle(void* user, const sxe_cycle* c)
+{
+    (void)user;
+    printf("cycle %lld: %+.2f%% (%s)\n", (long long)c->cycle, c->growth_pct, c->closed_by);
+}
+
+int main(void)
+{
+    sxe_engine* e = sxe_engine_create();
+    sxe_engine_load_config(e, "Target/Config/EngineConfig.ini");
+    sxe_engine_set(e, "SIMULATION", "initial_capital", "10000");
+    sxe_engine_set_option(e, SXE_OPT_ARCHIVE, 0);        /* niente cartelle b<N> */
+    sxe_engine_on_cycle(e, on_cycle, NULL);
+
+    if(sxe_engine_run(e) != SXE_OK)
+        fprintf(stderr, "%s\n", sxe_engine_error(e));
+    else
+        printf("return %+.2f%%, max drawdown %.2f%%\n",
+               sxe_engine_result(e)->return_pct, sxe_engine_result(e)->max_drawdown_pct);
+
+    sxe_engine_destroy(e);
+    return 0;
+}
+```
+
+```sh
+gcc -std=c99 main.c -I file/Api/Include -L Target/Bin -lSXE -Wl,-rpath,$PWD/Target/Bin -o main
+```
+
+- Un motore = una corsa: si configura, `sxe_engine_run()`, si legge il risultato, si
+  distrugge. Più motori possono girare insieme, ognuno nel suo thread.
+- Configurazione: le sezioni e le chiavi di `EngineConfig.ini`, da file
+  (`sxe_engine_load_config`), una per una (`sxe_engine_set`) o entrambe. Stessi controlli del
+  programma `SXE`; tutti gli errori si leggono con `sxe_engine_error()`. I percorsi relativi
+  partono dalla cartella di `libSXE.so` (`Target/Bin`), come per `SXE`.
+- Callback per i messaggi di log, per l'avanzamento (ogni N passi) e per ogni ciclo chiuso.
+- Opzioni per spegnere archivio, file di stato, registro ordini e file di log, per i
+  programmi a cui servono solo i numeri.
+- `sxe_engine_stop()` da un altro thread (o da una callback) chiude la corsa normalmente.
+
+I test fanno girare i riferimenti golden anche attraverso l'interfaccia C, da programmi scritti
+in C (`file/Tests/Api`).
+
+
 ## Configurazione
 
 `Target/Config/EngineConfig.ini`, ogni chiave è commentata nel file:
@@ -267,7 +325,7 @@ Una strategia che salva un suo stato (per esempio accanto al suo `.ini`) lo rica
 
 ## Test
 
-`./comp_All.sh test` lancia 19 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
+`./comp_All.sh test` lancia 23 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
 funding, 2023-2024) e su poche candele costruite a mano:
 
 | Test | Verifica |
@@ -290,6 +348,8 @@ funding, 2023-2024) e su poche candele costruite a mano:
 | `limit_touch` | lo stesso con `limit_fill = touch`: eseguito appena toccato |
 | `multirun_golden_template` | più motori nello stesso processo: una corsa completa, una che non scrive file e 4 in parallelo danno gli stessi numeri |
 | `multirun_golden_isolated` | lo stesso con le liquidazioni |
+| `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | le stesse corse golden attraverso l'interfaccia C (`libSXE.so`) da un programma scritto in C |
+| `api_checks` | interfaccia C: callback, opzioni senza file, configurazione senza file, arresto, tutti i codici di errore |
 | `benchmark` | passi al secondo (solo misura) |
 
 I test golden confrontano ogni ciclo con i riferimenti in `file/Tests/Golden`: qualsiasi
@@ -306,6 +366,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | Cartella | Contenuto |
 |---|---|
 | `file/` | tutti i sorgenti, una cartella per componente (vedi [file/README.md](file/README.md)) |
+| `file/Api` | interfaccia C: `sxe.h` e `libSXE.so` |
 | `file/Engine` | ciclo del motore, caricamento della strategia, archivio dei cicli, stato |
 | `file/Exchange` | interfaccia dell'exchange ed exchange simulato |
 | `file/DataFeed` | interfaccia dei dati e lettore CSV con i tick nella candela |

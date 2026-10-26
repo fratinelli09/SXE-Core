@@ -142,6 +142,28 @@ std::string CCycleArchive::Close(long long nTime, double dExitPrice, const Posit
 	                               std::to_string(nBuys) + ", drawdown max " + Num(dMinEquityPerc) + "%, max leverage " +
 	                               Num(dMaxLeverage);
 	bOpen = false;
+
+	if(fnCycle)
+	{
+		CycleRow row;
+		row.nCycle        = nCycle;
+		row.nOpenTime     = nOpenTime;
+		row.nCloseTime    = nTime;
+		row.dCapitalStart = dWalletStart;
+		row.dCapitalEnd   = dWalletAfter;
+		row.dGrowth       = dGrowth;
+		row.dDrawdown     = dMinEquityPerc;
+		row.dMaxLeverage  = dMaxLeverage;
+		row.nBuys         = nBuys;
+		row.dEntryPrice   = dFirstPrice;
+		row.dAvgPrice     = positionBefore.dAvgPrice;
+		row.dExitPrice    = dExitPrice;
+		row.dFees         = dFees;
+		row.dFunding      = positionBefore.dFundingPaid;
+		row.strClosedBy   = strReason;
+		fnCycle(row);
+	}
+
 	if(!bWrite)
 		return strSummary;
 

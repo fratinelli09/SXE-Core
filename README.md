@@ -59,12 +59,16 @@ Historical data live in any folder (`[PATH] data`). The period to simulate is se
 ### Strict configuration
 Every key is validated at startup and all errors are reported at once.
 
+### Embeddable
+The same engine is also a shared library with a C interface (`libSXE.so`, `sxe.h`), to use
+it from other programs and languages: see [Using SXE Core as a library](#using-sxe-core-as-a-library).
+
 ### Fast
 About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles with
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-19 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+23 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
 run by GitHub Actions on every push (Linux arm64, GCC 14).
 
 
@@ -240,6 +244,60 @@ A strategy that saves its own state (for example next to its `.ini`) reloads it 
 is false the run starts from scratch and any state left by a previous run must be ignored.
 
 
+## Using SXE Core as a library
+
+Besides the `SXE` program, the build produces `libSXE.so`: the same engine behind a C
+interface, [`file/Api/Include/sxe.h`](file/Api/Include/sxe.h), that any language able to call
+C functions can use (C, C++ with any compiler, Python, C#, Rust, ...).
+
+```c
+#include <stdio.h>
+#include "sxe.h"
+
+static void on_cycle(void* user, const sxe_cycle* c)
+{
+    (void)user;
+    printf("cycle %lld: %+.2f%% (%s)\n", (long long)c->cycle, c->growth_pct, c->closed_by);
+}
+
+int main(void)
+{
+    sxe_engine* e = sxe_engine_create();
+    sxe_engine_load_config(e, "Target/Config/EngineConfig.ini");
+    sxe_engine_set(e, "SIMULATION", "initial_capital", "10000");
+    sxe_engine_set_option(e, SXE_OPT_ARCHIVE, 0);        /* no b<N> folders */
+    sxe_engine_on_cycle(e, on_cycle, NULL);
+
+    if(sxe_engine_run(e) != SXE_OK)
+        fprintf(stderr, "%s\n", sxe_engine_error(e));
+    else
+        printf("return %+.2f%%, max drawdown %.2f%%\n",
+               sxe_engine_result(e)->return_pct, sxe_engine_result(e)->max_drawdown_pct);
+
+    sxe_engine_destroy(e);
+    return 0;
+}
+```
+
+```sh
+gcc -std=c99 main.c -I file/Api/Include -L Target/Bin -lSXE -Wl,-rpath,$PWD/Target/Bin -o main
+```
+
+- One engine = one run: configure, `sxe_engine_run()`, read the result, destroy. Several
+  engines can run at the same time, each in its own thread.
+- Configuration: the sections and keys of `EngineConfig.ini`, from a file
+  (`sxe_engine_load_config`), one by one (`sxe_engine_set`) or both. Same checks as the
+  `SXE` program; every error is returned by `sxe_engine_error()`. Relative paths start from
+  the folder of `libSXE.so` (`Target/Bin`), like for `SXE`.
+- Callbacks for log messages, progress (every N steps) and every closed cycle.
+- Options to turn off the archive, the state file, the order log and the log files, for
+  programs that only need the numbers.
+- `sxe_engine_stop()` from another thread (or from a callback) closes the run normally.
+
+The tests run the golden references through the C interface too, from programs written in C
+(`file/Tests/Api`).
+
+
 ## Configuration
 
 `Target/Config/EngineConfig.ini`, every key is commented in the file:
@@ -265,7 +323,7 @@ is false the run starts from scratch and any state left by a previous run must b
 
 ## Tests
 
-`./comp_All.sh test` runs 19 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
+`./comp_All.sh test` runs 23 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
 funding, 2023-2024) and on a few hand-made candles:
 
 | Test | Checks |
@@ -288,6 +346,8 @@ funding, 2023-2024) and on a few hand-made candles:
 | `limit_touch` | the same with `limit_fill = touch`: filled as soon as it is touched |
 | `multirun_golden_template` | several engines in one process: a full run, a run that writes no files and 4 runs in parallel give the same numbers |
 | `multirun_golden_isolated` | the same with liquidations |
+| `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | the same golden runs through the C interface (`libSXE.so`) from a program written in C |
+| `api_checks` | C interface: callbacks, options without files, configuration without files, stop, every error code |
 | `benchmark` | steps per second (measurement only) |
 
 Golden tests compare every cycle with the references in `file/Tests/Golden`: any change to
@@ -304,6 +364,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | Folder | Content |
 |---|---|
 | `file/` | all sources, one folder per component (see [file/README.md](file/README.md)) |
+| `file/Api` | C interface: `sxe.h` and `libSXE.so` |
 | `file/Engine` | the engine loop, strategy loader, cycle archive, state |
 | `file/Exchange` | exchange interface and simulated exchange |
 | `file/DataFeed` | data feed interface and CSV feed with intra-candle ticks |

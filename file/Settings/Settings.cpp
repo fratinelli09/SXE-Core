@@ -102,9 +102,25 @@ bool CSettings::Load(const std::string& strConfigFile, const std::string& strBas
         _AddError("Configuration file not found or not readable: " + strConfigFile);
         return false;
     }
+    return _Load(ini);
+}
+
+bool CSettings::LoadText(const std::string& strText, const std::string& strName, const std::string& strBaseDir_)
+{
+    bValid = false;
+    vErrors.clear();
+    strFilePath = strName;
+    strBaseDir  = strBaseDir_;
+
+    CReader ini(strText.data(), strText.size());
+    return _Load(ini);
+}
+
+bool CSettings::_Load(CReader& ini)
+{
     if (ini.ParseError() > 0)
     {
-        _AddError("Invalid line " + std::to_string(ini.ParseError()) + " in " + strConfigFile);
+        _AddError("Invalid line " + std::to_string(ini.ParseError()) + " in " + strFilePath);
         return false;
     }
 
@@ -434,7 +450,7 @@ void CSettings::_CheckFolder(const char* pszSection, const char* pszKey, const s
 
 bool CReader::IsValid() const
 {
-    return !strpath.empty() && ini.ParseError() == 0;
+    return (bMemory || !strpath.empty()) && ini.ParseError() == 0;
 }
 
 bool CReader::Has(const std::string& strSection, const std::string& strAttrib) const
@@ -444,7 +460,7 @@ bool CReader::Has(const std::string& strSection, const std::string& strAttrib) c
 
 bool CReader::CanWrite() const
 {
-    return !strpath.empty() && (ini.ParseError() == 0 || ini.ParseError() == -1);
+    return !bMemory && !strpath.empty() && (ini.ParseError() == 0 || ini.ParseError() == -1);
 }
 
 bool CReader::EnsureKey(const std::string& strSection, const std::string& strAttrib, const std::string& strDefault)
@@ -460,7 +476,7 @@ bool CReader::EnsureKey(const std::string& strSection, const std::string& strAtt
 
 bool CReader::Get(std::string strSection, std::string strAttrib, int &nValue)
 {
-    if (strpath.empty()) return false;
+    if (strpath.empty() && !bMemory) return false;
 
     if (!ini.HasValue(strSection, strAttrib))
         return EnsureKey(strSection, strAttrib, std::to_string(nValue));
@@ -474,7 +490,7 @@ bool CReader::Get(std::string strSection, std::string strAttrib, int &nValue)
 
 bool CReader::Get(std::string strSection, std::string strAttrib, double &dValue)
 {
-    if (strpath.empty()) return false;
+    if (strpath.empty() && !bMemory) return false;
 
     if (!ini.HasValue(strSection, strAttrib))
     {
@@ -493,7 +509,7 @@ bool CReader::Get(std::string strSection, std::string strAttrib, double &dValue)
 
 bool CReader::Get(std::string strSection, std::string strAttrib, std::string &strValue)
 {
-    if (strpath.empty()) return false;
+    if (strpath.empty() && !bMemory) return false;
 
     if (!ini.HasValue(strSection, strAttrib))
         return EnsureKey(strSection, strAttrib, strValue);

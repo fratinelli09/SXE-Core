@@ -7,6 +7,12 @@ Everything that is compiled. Every folder has its own `CMakeLists.txt`;
 `main.cpp`: reads `Target/Config/EngineConfig.ini`, prepares and starts the engine, handles
 Ctrl+C.
 
+### Api/ -> libSXE.so
+C interface of the engine, for other programs and languages.
+- `Include/sxe.h`: the only header needed, documented in its comments.
+- `Src/sxe.cpp`: the C functions on top of `CEngine` and `CSettings`; only the `sxe_`
+  functions are exported.
+
 ### Engine/ -> libEngine.so
 The engine.
 - `CEngine`: single thread, every step data -> exchange -> `Run()` of the strategy.
