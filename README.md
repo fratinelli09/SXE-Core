@@ -9,7 +9,7 @@ its interface, feeds it market data step by step and executes its orders on a si
 exchange that reproduces the rules of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.3.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
+Version 1.3.1 - changes in [CHANGELOG.md](CHANGELOG.md)  
 Italian version: [README_IT.md](README_IT.md)
 
 
@@ -68,7 +68,7 @@ About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles 
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-23 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+25 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
 run by GitHub Actions on every push on Linux arm64 (GCC 14) and Windows x64 (MSVC), with
 the same golden references on both.
 
@@ -358,7 +358,7 @@ The tests run the golden references through the C interface too, from programs w
 
 ## Tests
 
-`./comp_All.sh test` runs 23 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
+`./comp_All.sh test` runs 25 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
 funding, 2023-2024) and on a few hand-made candles:
 
 | Test | Checks |
@@ -367,6 +367,7 @@ funding, 2023-2024) and on a few hand-made candles:
 | `loader_old_api` | was built with another interface version, |
 | `loader_missing` | or does not exist |
 | `config_example` | the example `EngineConfig.ini` is valid |
+| `config_long_path`, `config_line_too_long` | a path longer than 200 characters is accepted; a line over the limit (4094 characters) is reported as too long |
 | `golden_template` | the Template strategy gives exactly the reference result |
 | `golden_isolated` | orders inside the candle, funding, liquidation (isolated margin) |
 | `golden_crossed` | the same with cross margin |

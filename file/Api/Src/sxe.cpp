@@ -13,6 +13,7 @@
 #include <cctype>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <new>
 #include <string>
@@ -337,7 +338,10 @@ SXE_API sxe_status sxe_engine_load_config(sxe_engine* engine, const char* ini_pa
 		if(ini.ParseError() < 0)
 			return engine->Fail(SXE_ERR_CONFIG, std::string("Configuration file not found or not readable: ") + ini_path);
 		if(ini.ParseError() > 0)
-			return engine->Fail(SXE_ERR_CONFIG, "Invalid line " + std::to_string(ini.ParseError()) + " in " + ini_path);
+		{
+			std::ifstream in(ini_path);
+			return engine->Fail(SXE_ERR_CONFIG, CSettings::LineError(ini.ParseError(), ini_path, in));
+		}
 
 		for(const std::string& strSection : ini.Sections())
 			for(const std::string& strKey : ini.Keys(strSection))

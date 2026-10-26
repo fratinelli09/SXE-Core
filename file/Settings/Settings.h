@@ -1,6 +1,7 @@
 #ifndef CSETTINGS_H
 #define CSETTINGS_H
 
+#include <iosfwd>
 #include <string>
 #include <utility>
 #include <vector>
@@ -195,6 +196,9 @@ public:
     static std::string ResolvePath(const std::string& strPath, const std::string& strBaseDir);
 
     static std::string StrategyFileName(const std::string& strLibrary);
+
+    // error text for the line nLine that inih did not accept: says when the line is too long
+    static std::string LineError(int nLine, const std::string& strName, std::istream& in);
 
     std::unique_ptr<CReader> getReader(std::string path, bool bCreateMissing = true) const
     {

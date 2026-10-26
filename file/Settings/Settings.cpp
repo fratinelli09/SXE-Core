@@ -1,9 +1,11 @@
 #include "Settings.h"
+#include "ini.h"
 
 #include <algorithm>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <locale>
 #include <sstream>
@@ -103,6 +105,19 @@ std::string CSettings::StrategyFileName(const std::string& strLibrary)
 #endif
 }
 
+// inih reads a line with fgets into INI_MAX_LINE bytes, '\n' and '\0' included
+std::string CSettings::LineError(int nLine, const std::string& strName, std::istream& in)
+{
+    const size_t nMax = INI_MAX_LINE - 2;
+    std::string strLine;
+    for (int i = 0; i < nLine && std::getline(in, strLine); i++)
+        ;
+    if (strLine.size() > nMax)
+        return "Line " + std::to_string(nLine) + " of " + strName + " is too long: at most " +
+               std::to_string(nMax) + " characters";
+    return "Invalid line " + std::to_string(nLine) + " in " + strName;
+}
+
 bool CSettings::Load(const std::string& strConfigFile, const std::string& strBaseDir_)
 {
     bValid = false;
@@ -117,6 +132,12 @@ bool CSettings::Load(const std::string& strConfigFile, const std::string& strBas
         _AddError("Configuration file not found or not readable: " + strConfigFile);
         return false;
     }
+    if (ini.ParseError() > 0)
+    {
+        std::ifstream in(strConfigFile);
+        _AddError(LineError(ini.ParseError(), strConfigFile, in));
+        return false;
+    }
     return _Load(ini);
 }
 
@@ -128,17 +149,17 @@ bool CSettings::LoadText(const std::string& strText, const std::string& strName,
     strBaseDir  = strBaseDir_;
 
     CReader ini(strText.data(), strText.size());
+    if (ini.ParseError() > 0)
+    {
+        std::istringstream in(strText);
+        _AddError(LineError(ini.ParseError(), strName, in));
+        return false;
+    }
     return _Load(ini);
 }
 
 bool CSettings::_Load(CReader& ini)
 {
-    if (ini.ParseError() > 0)
-    {
-        _AddError("Invalid line " + std::to_string(ini.ParseError()) + " in " + strFilePath);
-        return false;
-    }
-
     std::string strMode;
     if (_Required(ini, CFG_ENGINE_SECTION, CFG_ENGINE_MODE, strMode))
     {

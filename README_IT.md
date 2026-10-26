@@ -10,7 +10,7 @@ dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le rego
 vero: ordini a mercato e limite, commissioni taker e maker, slippage, margine
 isolated/crossed, margine di mantenimento a scaglioni, funding ogni 8 ore e liquidazione.
 
-Versione 1.3.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
+Versione 1.3.1 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
 English version: [README.md](README.md)
 
 
@@ -71,7 +71,7 @@ Circa 700.000 passi al secondo su un Raspberry Pi 4: due anni di candele da 1 or
 dentro la candela girano in 0,2 secondi.
 
 ### Testato
-23 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
+25 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
 mano, eseguiti da GitHub Actions a ogni push su Linux arm64 (GCC 14) e Windows x64 (MSVC), con
 gli stessi riferimenti golden su entrambi.
 
@@ -362,7 +362,7 @@ in C (`file/Tests/Api`).
 
 ## Test
 
-`./comp_All.sh test` lancia 23 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
+`./comp_All.sh test` lancia 25 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
 funding, 2023-2024) e su poche candele costruite a mano:
 
 | Test | Verifica |
@@ -371,6 +371,7 @@ funding, 2023-2024) e su poche candele costruite a mano:
 | `loader_old_api` | compilata con un'altra versione dell'interfaccia, |
 | `loader_missing` | o assente |
 | `config_example` | l'`EngineConfig.ini` di esempio è valido |
+| `config_long_path`, `config_line_too_long` | un percorso più lungo di 200 caratteri viene accettato; una riga oltre il limite (4094 caratteri) viene segnalata come troppo lunga |
 | `golden_template` | la strategia Template dà esattamente il risultato di riferimento |
 | `golden_isolated` | ordini dentro la candela, funding, liquidazione (margine isolated) |
 | `golden_crossed` | lo stesso con margine crossed |

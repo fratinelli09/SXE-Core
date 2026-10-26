@@ -123,7 +123,24 @@ set_tests_properties(loader_missing PROPERTIES PASS_REGULAR_EXPRESSION "libMissi
 add_test(NAME config_example COMMAND SXE ${CMAKE_SOURCE_DIR}/Target/Config/EngineConfig.ini)
 set_tests_properties(config_example PROPERTIES
     PASS_REGULAR_EXPRESSION "SXE START|ERROR|SXE:"
-    FAIL_REGULAR_EXPRESSION "Invalid line|is not valid|Required key|out of range|tier '|no tier|invalid date|must be 0 or 1")
+    FAIL_REGULAR_EXPRESSION "Invalid line|too long|is not valid|Required key|out of range|tier '|no tier|invalid date|must be 0 or 1")
+
+# long lines: a path longer than the 200 characters inih reads by default is accepted;
+# a line over the limit is reported as too long ("./" is removed when the path is resolved)
+string(REPEAT "./" 150 LONG_PATH_PREFIX)
+set(T_DATA_DIR "${SXE_TEST_SOURCE_DIR}/${LONG_PATH_PREFIX}Data")
+sxe_test_config(config_long_path LIBRARY TestStrategy FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini END_DATE 2023-01-31)
+add_test(NAME config_long_path COMMAND SXE ${TEST_DIR}/config_long_path.ini)
+set_tests_properties(config_long_path PROPERTIES FAIL_REGULAR_EXPRESSION "Invalid line|too long|not found")
+
+string(REPEAT "./" 2100 LONG_PATH_PREFIX)
+set(T_DATA_DIR "${SXE_TEST_SOURCE_DIR}/${LONG_PATH_PREFIX}Data")
+sxe_test_config(config_line_too_long LIBRARY TestStrategy FOLDER ${TEST_DIR}
+                STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini)
+add_test(NAME config_line_too_long COMMAND SXE ${TEST_DIR}/config_line_too_long.ini)
+set_tests_properties(config_line_too_long PROPERTIES PASS_REGULAR_EXPRESSION "Line 14 of .* is too long: at most 4094 characters")
+unset(T_DATA_DIR)
 
 #--- 2. results identical to the references ---------------------------------
 # Template, path following the candle direction

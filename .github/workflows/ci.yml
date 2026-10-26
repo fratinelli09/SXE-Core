@@ -6,7 +6,7 @@
 #
 # When a release is published, the Windows job also attaches a ready-to-use zip to it:
 # SXE.exe, SXE.dll + SXE.lib + sxe.h (C interface), the engine DLLs, the Template strategy,
-# the example configuration and the test data.
+# the example configuration, the test data and the licences (SXE Core and inih).
 
 name: CI
 
@@ -66,7 +66,7 @@ jobs:
           Copy-Item Target/Config/*.ini "$dist/Config/"
           (Get-Content "$dist/Config/EngineConfig.ini") -replace '^data\s*=.*$', 'data   = ../Data' |
               Set-Content "$dist/Config/EngineConfig.ini"
-          Copy-Item LICENSE, README.md "$dist/"
+          Copy-Item LICENSE, README.md, file/Settings/LICENSE_inih.txt "$dist/"
           Compress-Archive -Path $dist -DestinationPath SXE-Core-windows-x64.zip
 
       - name: Upload the package

@@ -6,6 +6,26 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
+## 1.3.1 - 2026-10-26
+
+Same results as 1.3.0: the golden references are unchanged.
+
+### Fixes
+
+- INI files: lines up to 4094 characters (inih read at most 198, so a configuration with a
+  long path, for example a deep folder or a OneDrive folder on Windows, was refused with
+  "Invalid line"). A longer line is now reported as "Line N of <file> is too long", also
+  through the C interface.
+- The Windows package contains the licence of inih (`LICENSE_inih.txt`), required by its
+  BSD licence for binary distributions.
+
+### Tests (25 in total)
+
+- `config_long_path`: a configuration with a path of more than 300 characters runs.
+- `config_line_too_long`: a line of more than 4094 characters is reported as too long.
+- `api_checks`: the same through `sxe_engine_set()`.
+
+
 ## 1.3.0 - 2026-10-26
 
 The strategy interface does not change (`SXE_API_VERSION` 3), but strategies must be

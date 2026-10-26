@@ -202,6 +202,17 @@ int main(int argc, char* argv[])
 	CHECK(sxe_engine_set_base_dir(e, "/nonexistent") == SXE_ERR_ARGUMENT, "missing base folder refused");
 	sxe_engine_destroy(e);
 
+	e = NewEngine("long_line");
+	{
+		static char szLong[5000];
+		memset(szLong, 'x', sizeof(szLong) - 1);
+		szLong[sizeof(szLong) - 1] = '\0';
+		sxe_engine_set(e, "PATH", "data", szLong);
+	}
+	CHECK(sxe_engine_setup(e) == SXE_ERR_CONFIG && strstr(sxe_engine_error(e), "too long") != NULL,
+	      "value longer than an INI line: reported as too long");
+	sxe_engine_destroy(e);
+
 	e = NewEngine("bad_value");
 	sxe_engine_set(e, "EXCHANGE", "margin_mode", "sideways");
 	sxe_engine_set(e, "SIMULATION", "initial_capital", "-5");
