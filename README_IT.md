@@ -10,7 +10,7 @@ dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le rego
 vero: ordini a mercato e limite, commissioni taker e maker, slippage, margine
 isolated/crossed, margine di mantenimento a scaglioni, funding ogni 8 ore e liquidazione.
 
-Versione 1.4.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
+Versione 1.5.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
 English version: [README.md](README.md)
 
 
@@ -65,6 +65,7 @@ Ogni chiave viene controllata all'avvio e gli errori vengono segnalati tutti ins
 ### Incorporabile
 Lo stesso motore è anche una libreria condivisa con interfaccia C (`libSXE.so` su Linux,
 `SXE.dll` su Windows, `sxe.h`), per usarlo da altri programmi e linguaggi: vedi [Usare SXE Core come libreria](#usare-sxe-core-come-libreria).
+Dai progetti CMake con `find_package(SXE)`.
 Da Python con `import sxe`: vedi [Usare SXE Core da Python](#usare-sxe-core-da-python).
 
 ### Veloce
@@ -72,7 +73,7 @@ Circa 700.000 passi al secondo su un Raspberry Pi 4: due anni di candele da 1 or
 dentro la candela girano in 0,2 secondi.
 
 ### Testato
-29 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
+30 test CTest su dati di mercato reali fissi (BTCUSDT 2023-2024) e su candele costruite a
 mano, eseguiti da GitHub Actions a ogni push su Linux arm64 (GCC 14) e Windows x64 (MSVC), con
 gli stessi riferimenti golden su entrambi.
 
@@ -323,6 +324,20 @@ Windows trova `SXE.dll` e le DLL del motore che le servono solo accanto al progr
 `PATH`: si copia il programma in `Target\Bin` o si aggiunge quella cartella al `PATH`, come
 sopra.
 
+Con CMake, la build installa anche un pacchetto: `Target/Include/sxe.h` e
+`Target/cmake/SXEConfig.cmake` (nel pacchetto Windows: `Include` e `cmake`). Un altro progetto
+CMake lo usa con:
+
+```cmake
+find_package(SXE 1.5 REQUIRED)       # cmake -DCMAKE_PREFIX_PATH=<percorso>/Target ...
+add_executable(main main.c)
+target_link_libraries(main PRIVATE SXE::SXE)
+```
+
+`SXE::SXE` porta con sé l'header e la libreria. Su Linux il programma compilato da CMake trova
+`libSXE.so` da solo; su Windows `SXE.dll` deve comunque stare accanto al programma o nel `PATH`
+(la cartella è nella variabile `SXE_BIN_DIR`).
+
 - Un motore = una corsa: si configura, `sxe_engine_run()`, si legge il risultato, si
   distrugge. Più motori possono girare insieme, ognuno nel suo thread.
 - Configurazione: le sezioni e le chiavi di `EngineConfig.ini`, da file
@@ -433,7 +448,7 @@ I test fanno girare i riferimenti golden anche da Python (`file/Tests/Python`).
 
 ## Test
 
-`./comp_All.sh test` lancia 29 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
+`./comp_All.sh test` lancia 30 test su dati reali fissi (`file/Tests/Data`: BTCUSDT 1h e
 funding, 2023-2024) e su poche candele costruite a mano:
 
 | Test | Verifica |
@@ -461,6 +476,7 @@ funding, 2023-2024) e su poche candele costruite a mano:
 | `api_checks` | interfaccia C: callback, opzioni senza file, configurazione senza file, arresto, tutti i codici di errore |
 | `python_golden_template`, `python_golden_isolated`, `python_golden_limit` | le stesse corse golden da Python (`sxe.py`) |
 | `python_checks` | `sxe.py`: callback, dataclass, tabella pandas, `files=False`, eccezioni, arresto, Ctrl+C, 4 motori in thread paralleli |
+| `cmake_package` | un programma fuori da SXE Core compilato con `find_package(SXE)`: installazione, configurazione, compilazione, avvio |
 | `benchmark` | passi al secondo (solo misura) |
 
 I test golden confrontano ogni ciclo con i riferimenti in `file/Tests/Golden`: qualsiasi
@@ -487,10 +503,10 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | `file/Common` | logger, thread, date, tipi comuni |
 | `file/Strategies/Template` | strategia di esempio |
 | `file/Tests` | test, dati fissi, riferimenti golden |
-| `cmake/` | `sxe_add_strategy`, anche per strategie fuori dal progetto |
+| `cmake/` | `sxe_add_strategy`, anche per strategie fuori dal progetto; `SXEConfig.cmake.in`, il pacchetto CMake |
 | `docs/` | grafico di esempio e `equity_chart.py`, che lo disegna da `total_result.txt` |
 | `Target/Config` | configurazione di esempio: `EngineConfig.ini`, `Template.ini` |
-| `Target/Bin`, `Log`, `Backup` | create dalla compilazione e dalle esecuzioni (non sono nel repository) |
+| `Target/Bin`, `Include`, `cmake`, `Log`, `Backup` | create dalla compilazione e dalle esecuzioni (non sono nel repository) |
 
 
 ## Limiti della versione pubblica

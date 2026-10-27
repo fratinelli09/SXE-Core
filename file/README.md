@@ -60,7 +60,8 @@ Every folder of `Strategies` with a `CMakeLists.txt` is built automatically; if 
 ### Tests/ (CTest tests)
 `SxeTest.cmake` runs the tests; `Data/` fixed real data (BTCUSDT 1h and funding 2023-2024);
 `Golden/` expected results; `TestStrategy/` test strategy and a library with a wrong
-interface. Run them with `./comp_All.sh test`.
+interface; `Api/` and `Python/` the C interface and `sxe.py`; `Package/` a program outside
+SXE Core that uses it with `find_package(SXE)`. Run them with `./comp_All.sh test`.
 
 ## Dependencies
 

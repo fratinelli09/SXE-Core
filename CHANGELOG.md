@@ -6,6 +6,26 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
+## 1.5.0 - 2026-10-27
+
+The C interface and the strategy interface do not change (`SXE_C_API_VERSION` 1,
+`SXE_API_VERSION` 3). Same results as 1.4.0: the golden references are unchanged.
+
+### CMake package
+
+- The install adds `Include/sxe.h` and `cmake/SXEConfig.cmake` (+ `SXEConfigVersion.cmake`)
+  to `Target` and to the Windows package: another CMake project uses SXE Core with
+  `find_package(SXE 1.5 REQUIRED)` and `target_link_libraries(<program> PRIVATE SXE::SXE)`.
+- `SXE::SXE` is the C interface only (header and `libSXE.so` / `SXE.dll` + `SXE.lib`); the
+  engine libraries it loads stay out of the package. Versions with the same first number are
+  compatible.
+
+### Tests (30 in total)
+
+- `cmake_package`: installs SXE Core into a folder, builds a C program outside the project
+  with `find_package(SXE)` and runs it.
+
+
 ## 1.4.0 - 2026-10-27
 
 The C interface and the strategy interface do not change (`SXE_C_API_VERSION` 1,

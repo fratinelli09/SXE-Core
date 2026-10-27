@@ -1,0 +1,23 @@
+# SXE Core as a CMake package: the C interface (sxe.h, libSXE.so / SXE.dll)
+#
+#     find_package(SXE 1.5 REQUIRED)       # CMAKE_PREFIX_PATH or SXE_DIR: the Target folder
+#     target_link_libraries(<program> PRIVATE SXE::SXE)
+#
+# SXE_BIN_DIR: the folder of the library and of the engine libraries it loads. On Windows a
+# program finds SXE.dll and the engine DLLs only next to itself or in PATH.
+@PACKAGE_INIT@
+
+set_and_check(SXE_BIN_DIR     "@PACKAGE_SXE_BIN_DIR@")
+set_and_check(SXE_INCLUDE_DIR "@PACKAGE_SXE_INCLUDE_DIR@")
+
+if(NOT TARGET SXE::SXE)
+    add_library(SXE::SXE SHARED IMPORTED)
+    set_target_properties(SXE::SXE PROPERTIES
+        IMPORTED_LOCATION             "${SXE_BIN_DIR}/@SXE_LIBRARY_FILE@"
+        INTERFACE_INCLUDE_DIRECTORIES "${SXE_INCLUDE_DIR}")
+    if(WIN32)
+        set_target_properties(SXE::SXE PROPERTIES IMPORTED_IMPLIB "${SXE_BIN_DIR}/@SXE_IMPLIB_FILE@")
+    endif()
+endif()
+
+check_required_components(SXE)

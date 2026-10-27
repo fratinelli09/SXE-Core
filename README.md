@@ -9,7 +9,7 @@ its interface, feeds it market data step by step and executes its orders on a si
 exchange that reproduces the rules of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.4.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
+Version 1.5.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
 Italian version: [README_IT.md](README_IT.md)
 
 
@@ -62,6 +62,7 @@ Every key is validated at startup and all errors are reported at once.
 ### Embeddable
 The same engine is also a shared library with a C interface (`libSXE.so` on Linux,
 `SXE.dll` on Windows, `sxe.h`), to use it from other programs and languages: see [Using SXE Core as a library](#using-sxe-core-as-a-library).
+From CMake projects with `find_package(SXE)`.
 From Python with `import sxe`: see [Using SXE Core from Python](#using-sxe-core-from-python).
 
 ### Fast
@@ -69,7 +70,7 @@ About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles 
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-29 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+30 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
 run by GitHub Actions on every push on Linux arm64 (GCC 14) and Windows x64 (MSVC), with
 the same golden references on both.
 
@@ -319,6 +320,20 @@ main.exe
 Windows finds `SXE.dll` and the engine DLLs it needs only next to the program or in `PATH`:
 copy the program into `Target\Bin` or add that folder to `PATH`, as above.
 
+With CMake, the build also installs a package: `Target/Include/sxe.h` and
+`Target/cmake/SXEConfig.cmake` (in the Windows package: `Include` and `cmake`). Another CMake
+project uses it with:
+
+```cmake
+find_package(SXE 1.5 REQUIRED)       # cmake -DCMAKE_PREFIX_PATH=<path>/Target ...
+add_executable(main main.c)
+target_link_libraries(main PRIVATE SXE::SXE)
+```
+
+`SXE::SXE` brings the header and the library. On Linux the program built by CMake finds
+`libSXE.so` by itself; on Windows `SXE.dll` must still be next to the program or in `PATH`
+(the folder is in the variable `SXE_BIN_DIR`).
+
 - One engine = one run: configure, `sxe_engine_run()`, read the result, destroy. Several
   engines can run at the same time, each in its own thread.
 - Configuration: the sections and keys of `EngineConfig.ini`, from a file
@@ -428,7 +443,7 @@ The tests run the golden references from Python too (`file/Tests/Python`).
 
 ## Tests
 
-`./comp_All.sh test` runs 29 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
+`./comp_All.sh test` runs 30 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
 funding, 2023-2024) and on a few hand-made candles:
 
 | Test | Checks |
@@ -456,6 +471,7 @@ funding, 2023-2024) and on a few hand-made candles:
 | `api_checks` | C interface: callbacks, options without files, configuration without files, stop, every error code |
 | `python_golden_template`, `python_golden_isolated`, `python_golden_limit` | the same golden runs from Python (`sxe.py`) |
 | `python_checks` | `sxe.py`: callbacks, dataclasses, pandas table, `files=False`, exceptions, stop, Ctrl+C, 4 engines in parallel threads |
+| `cmake_package` | a program outside SXE Core built with `find_package(SXE)`: install, configure, build, run |
 | `benchmark` | steps per second (measurement only) |
 
 Golden tests compare every cycle with the references in `file/Tests/Golden`: any change to
@@ -482,10 +498,10 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | `file/Common` | logger, thread, time utilities, shared types |
 | `file/Strategies/Template` | example strategy |
 | `file/Tests` | tests, fixed data, golden references |
-| `cmake/` | `sxe_add_strategy`, also for strategies outside the project |
+| `cmake/` | `sxe_add_strategy`, also for strategies outside the project; `SXEConfig.cmake.in`, the CMake package |
 | `docs/` | example chart and `equity_chart.py`, which draws it from `total_result.txt` |
 | `Target/Config` | example configuration: `EngineConfig.ini`, `Template.ini` |
-| `Target/Bin`, `Log`, `Backup` | created by the build and by the runs (not in the repository) |
+| `Target/Bin`, `Include`, `cmake`, `Log`, `Backup` | created by the build and by the runs (not in the repository) |
 
 
 ## Limits of the public edition

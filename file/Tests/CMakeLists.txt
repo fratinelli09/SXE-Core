@@ -303,6 +303,13 @@ else()
     message(STATUS "Python 3.8 not found: Python tests skipped")
 endif()
 
+#--- 5c. CMake package: a program outside SXE Core with find_package(SXE) -------
+add_test(NAME cmake_package
+         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR} -DCONFIG=$<CONFIG>
+                 -DDIR=${TEST_DIR}/cmake_package -DSOURCE=${SXE_TEST_SOURCE_DIR}/Package
+                 "-DGENERATOR=${CMAKE_GENERATOR}" "-DPLATFORM=${CMAKE_GENERATOR_PLATFORM}"
+                 -DC_COMPILER=${CMAKE_C_COMPILER} -P ${SXE_TEST_SOURCE_DIR}/Package/PackageTest.cmake)
+
 #--- 6. speed (measurement only) ---------------------------------------------
 sxe_test_config(benchmark LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini)
