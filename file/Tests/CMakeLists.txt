@@ -24,6 +24,8 @@ set(SXE_TEST_GOLDEN   ${CMAKE_CURRENT_SOURCE_DIR}/Golden)
 set(T_DATA_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/Data CACHE INTERNAL "")
 set(TEMPLATE_DIR      ${CMAKE_BINARY_DIR}/file/Strategies/Template)
 set(TEMPLATE_CONFIG   ${CMAKE_SOURCE_DIR}/Target/Config/Template.ini)
+set(SIMPLEDCA_DIR     ${CMAKE_BINARY_DIR}/file/Strategies/SimpleDca)
+set(SIMPLEDCA_CONFIG  ${CMAKE_SOURCE_DIR}/Target/Config/SimpleDca.ini)
 
 #----------------------------------------------------------
 # sxe_test_config(<name> LIBRARY .. FOLDER .. STRATEGY_CONFIG .. [DIR ..] [RESUME 0|1]
@@ -173,7 +175,11 @@ set_tests_properties(no_liquidation_warning PROPERTIES PASS_REGULAR_EXPRESSION "
 sxe_test_config(golden_limit LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini)
 
-foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_first golden_high_first golden_bitget golden_limit)
+# SimpleDca, the DCA of the case study (docs/case_study.md): safety orders, take profit, leverage 3
+sxe_test_config(golden_simpledca LIBRARY SimpleDca FOLDER ${SIMPLEDCA_DIR} STRATEGY_CONFIG ${SIMPLEDCA_CONFIG})
+
+foreach(GOLDEN_TEST golden_template golden_isolated golden_crossed golden_low_first golden_high_first golden_bitget golden_limit
+                    golden_simpledca)
     add_test(NAME ${GOLDEN_TEST}
              COMMAND ${CMAKE_COMMAND} -DMODE=GOLDEN -DSXE=$<TARGET_FILE:SXE>
                      -DCONFIG=${TEST_DIR}/${GOLDEN_TEST}.ini -DDIR=${TEST_DIR}/${GOLDEN_TEST}

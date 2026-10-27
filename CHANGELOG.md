@@ -6,6 +6,32 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
+## 1.6.0 - 2026-10-27
+
+The engine, the C interface and the strategy interface do not change (`SXE_C_API_VERSION` 1,
+`SXE_API_VERSION` 3). Same results as 1.5.0: the golden references are unchanged.
+
+### Case study
+
+- `docs/case_study.md`: a leveraged DCA bot on BTCUSDT 2023-2024, from the naive backtest
+  to the realistic simulation, the drawdown behind the return, leverage, robustness and
+  limits, with three charts.
+- `docs/case_study.py` runs every simulation of the page with `sxe.py` and redraws the
+  charts (pandas and matplotlib), in about 10 seconds.
+- New example strategy `SimpleDca` (`file/Strategies/SimpleDca`, `Target/Config/SimpleDca.ini`):
+  base order, safety orders every `step_perc` below the first entry, each `size_mult` times
+  the previous one, take profit on the average price.
+
+### Fixes
+
+- `EngineConfig.ini`: the comment on `maintenance_tiers` still gave 200 characters as the
+  longest line; since 1.3.1 it is 4094.
+
+### Tests (31 in total)
+
+- `golden_simpledca`: the SimpleDca strategy gives exactly the reference result.
+
+
 ## 1.5.0 - 2026-10-27
 
 The C interface and the strategy interface do not change (`SXE_C_API_VERSION` 1,
