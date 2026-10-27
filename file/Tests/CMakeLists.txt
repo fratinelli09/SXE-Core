@@ -271,6 +271,38 @@ add_test(NAME api_checks
          COMMAND SxeApiTest ${TEST_DIR}/api_checks.ini ${TEST_DIR}/api_checks ${TEST_DIR} TestStrategy
                  ${TEST_DIR}/TestStrategy_lev10.ini ${SXE_TEST_SOURCE_DIR}/Data)
 
+#--- 5b. Python (sxe.py over the C interface) --------------------------------
+# skipped without Python 3.8; with the environment variable SXE_REQUIRE_PYTHON (CI) it is required
+if(DEFINED ENV{SXE_REQUIRE_PYTHON})
+    find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+else()
+    find_package(Python3 3.8 COMPONENTS Interpreter)
+endif()
+if(Python3_Interpreter_FOUND)
+    set(PYTHON_TESTS_DIR ${SXE_TEST_SOURCE_DIR}/Python)
+    # the same golden runs as the C interface, each in its own folder
+    sxe_test_config(python_golden_template LIBRARY Template FOLDER ${TEMPLATE_DIR} STRATEGY_CONFIG ${TEMPLATE_CONFIG})
+    sxe_test_config(python_golden_isolated LIBRARY TestStrategy FOLDER ${TEST_DIR}
+                    STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
+    sxe_test_config(python_golden_limit LIBRARY TestStrategy FOLDER ${TEST_DIR}
+                    STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_limit.ini)
+    foreach(API_TEST template isolated limit)
+        add_test(NAME python_golden_${API_TEST}
+                 COMMAND ${CMAKE_COMMAND} -DMODE=GOLDEN -DSXE_LAUNCHER=${Python3_EXECUTABLE}
+                         -DSXE=${PYTHON_TESTS_DIR}/sxe_run.py
+                         -DCONFIG=${TEST_DIR}/python_golden_${API_TEST}.ini -DDIR=${TEST_DIR}/python_golden_${API_TEST}
+                         -DGOLDEN=${SXE_TEST_GOLDEN}/golden_${API_TEST}.txt -P ${SXE_TEST_SCRIPT})
+    endforeach()
+    sxe_test_config(python_checks LIBRARY TestStrategy FOLDER ${TEST_DIR}
+                    STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev10.ini)
+    add_test(NAME python_checks
+             COMMAND ${Python3_EXECUTABLE} ${PYTHON_TESTS_DIR}/sxe_test.py ${TEST_DIR}/python_checks.ini ${TEST_DIR}/python_checks)
+    set_tests_properties(python_golden_template python_golden_isolated python_golden_limit python_checks
+                         PROPERTIES ENVIRONMENT "SXE_LIBRARY=$<TARGET_FILE:SXEApi>")
+else()
+    message(STATUS "Python 3.8 not found: Python tests skipped")
+endif()
+
 #--- 6. speed (measurement only) ---------------------------------------------
 sxe_test_config(benchmark LIBRARY TestStrategy FOLDER ${TEST_DIR}
                 STRATEGY_CONFIG ${TEST_DIR}/TestStrategy_lev3.ini)
