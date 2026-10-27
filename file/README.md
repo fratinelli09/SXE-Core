@@ -53,6 +53,10 @@ Boundary between engine and strategy: `CStrategyBase` (`GetInfo`, `LoadConfig`, 
 Example strategy (moving-average crossover), configured by `Target/Config/Template.ini`.
 Starting point for a new strategy.
 
+### Strategies/SimpleDca/ -> libSimpleDca.so
+Example DCA bot (safety orders, take profit on the average price), configured by
+`Target/Config/SimpleDca.ini`: the strategy of the case study (`docs/case_study.md`).
+
 ### Strategies/\<Name\>/ -> lib\<Name\>.so
 Every folder of `Strategies` with a `CMakeLists.txt` is built automatically; if it has a
 `Test/` subfolder, its tests are built too.

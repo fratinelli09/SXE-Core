@@ -9,7 +9,9 @@ its interface, feeds it market data step by step and executes its orders on a si
 exchange that reproduces the rules of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.5.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
+Case study: [What a backtest hides: a leveraged DCA bot under realistic simulation](docs/case_study.md)
+
+Version 1.6.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
 Italian version: [README_IT.md](README_IT.md)
 
 
@@ -70,7 +72,7 @@ About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles 
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-30 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+31 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
 run by GitHub Actions on every push on Linux arm64 (GCC 14) and Windows x64 (MSVC), with
 the same golden references on both.
 
@@ -193,6 +195,10 @@ The chart is drawn by `python3 docs/equity_chart.py Target/Backup/total_result.t
 (standard library only), also for your own runs.
 
 The Template shows how to write a strategy; it is not a strategy to trade.
+
+A second example, `SimpleDca` (a DCA bot with safety orders and take profit), is the
+strategy of the [case study](docs/case_study.md): `library = SimpleDca` and
+`config = ../Config/SimpleDca.ini` in `EngineConfig.ini`.
 
 
 ## Using your own data
@@ -443,7 +449,7 @@ The tests run the golden references from Python too (`file/Tests/Python`).
 
 ## Tests
 
-`./comp_All.sh test` runs 30 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
+`./comp_All.sh test` runs 31 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
 funding, 2023-2024) and on a few hand-made candles:
 
 | Test | Checks |
@@ -454,6 +460,7 @@ funding, 2023-2024) and on a few hand-made candles:
 | `config_example` | the example `EngineConfig.ini` is valid |
 | `config_long_path`, `config_line_too_long` | a path longer than 200 characters is accepted; a line over the limit (4094 characters) is reported as too long |
 | `golden_template` | the Template strategy gives exactly the reference result |
+| `golden_simpledca` | the SimpleDca strategy of the case study gives exactly the reference result |
 | `golden_isolated` | orders inside the candle, funding, liquidation (isolated margin) |
 | `golden_crossed` | the same with cross margin |
 | `golden_low_first` | extreme intra-candle path: low first |
@@ -497,10 +504,11 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 | `file/Settings` | configuration and INI reader |
 | `file/Common` | logger, thread, time utilities, shared types |
 | `file/Strategies/Template` | example strategy |
+| `file/Strategies/SimpleDca` | DCA example, the strategy of the case study |
 | `file/Tests` | tests, fixed data, golden references |
 | `cmake/` | `sxe_add_strategy`, also for strategies outside the project; `SXEConfig.cmake.in`, the CMake package |
-| `docs/` | example chart and `equity_chart.py`, which draws it from `total_result.txt` |
-| `Target/Config` | example configuration: `EngineConfig.ini`, `Template.ini` |
+| `docs/` | example chart and `equity_chart.py`, which draws it from `total_result.txt`; the case study (`case_study.md`, `case_study.py`) |
+| `Target/Config` | example configuration: `EngineConfig.ini`, `Template.ini`, `SimpleDca.ini` |
 | `Target/Bin`, `Include`, `cmake`, `Log`, `Backup` | created by the build and by the runs (not in the repository) |
 
 
