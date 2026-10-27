@@ -6,6 +6,36 @@ The strategy interface has its own number (`SXE_API_VERSION` in `file/SDK/Strate
 the engine refuses strategies built for a different one.
 
 
+## 1.4.0 - 2026-10-27
+
+The C interface and the strategy interface do not change (`SXE_C_API_VERSION` 1,
+`SXE_API_VERSION` 3). Same results as 1.3.1: the golden references are unchanged.
+
+### SXE Core from Python: sxe.py
+
+- New module `file/Python/sxe.py`, installed next to the library: the C interface from
+  Python with `ctypes`, no build step and no dependencies (Python 3.8 or later).
+- `sxe.run(config, settings, files=False)` for one run, `sxe.Engine` for callbacks, options
+  and `stop()`. Results, cycles and progress as dataclasses with `datetime` in UTC; every
+  closed cycle in `Result.cycle_list`, which `pandas.DataFrame()` turns into a table with
+  times in UTC (example in the README).
+- Errors as exceptions (`ConfigError`, `SetupError`, `RunError`, ...); an exception in a
+  callback stops the run and comes out of `run()`; Ctrl+C closes the run and raises
+  `KeyboardInterrupt`.
+- `run()` releases the GIL: engines in different threads run in parallel.
+- The Windows package contains `sxe.py` in `Bin`.
+
+### Tests (29 in total)
+
+- `python_golden_template`, `python_golden_isolated`, `python_golden_limit`: the golden runs
+  from Python, identical to the references.
+- `python_checks`: callbacks, dataclasses, the pandas table (skipped when pandas is
+  missing), runs without files, settings, exceptions, stop from another thread, Ctrl+C,
+  4 engines in parallel threads.
+- `SxeTest.cmake`: optional `SXE_LAUNCHER`, the program that runs `SXE` (here Python).
+- CI: Python 3 and pandas are required on Linux and Windows.
+
+
 ## 1.3.1 - 2026-10-26
 
 Same results as 1.3.0: the golden references are unchanged.

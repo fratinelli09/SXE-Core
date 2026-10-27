@@ -12,6 +12,8 @@
 #   MODE=ORDERS  SXE CONFIG DIR MATCH1..MATCH4 ABSENT RESULT_MATCH
 #       simulation from scratch; the order log must contain a line matching each MATCHn and
 #       none matching ABSENT, total_result.txt a line matching RESULT_MATCH
+#   SXE_LAUNCHER (optional, every mode): program that runs SXE, e.g. the Python interpreter
+#       when SXE is a Python script
 #       (in the regular expressions the field separator ';' is written '|')
 #   MODE=BENCH   SXE CONFIG DIR
 #       full simulation, prints the steps per second (never fails because of speed).
@@ -23,7 +25,7 @@ function(run_sxe CONFIG DIR bClean)
     if(bClean)
         file(REMOVE_RECURSE "${DIR}/Log" "${DIR}/Backup")
     endif()
-    execute_process(COMMAND "${SXE}" "${CONFIG}"
+    execute_process(COMMAND ${SXE_LAUNCHER} "${SXE}" "${CONFIG}"
                     RESULT_VARIABLE nResult
                     OUTPUT_VARIABLE strOut
                     ERROR_VARIABLE strErr)

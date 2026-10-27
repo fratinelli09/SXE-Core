@@ -9,7 +9,7 @@ its interface, feeds it market data step by step and executes its orders on a si
 exchange that reproduces the rules of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
 
-Version 1.3.1 - changes in [CHANGELOG.md](CHANGELOG.md)  
+Version 1.4.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
 Italian version: [README_IT.md](README_IT.md)
 
 
@@ -62,13 +62,14 @@ Every key is validated at startup and all errors are reported at once.
 ### Embeddable
 The same engine is also a shared library with a C interface (`libSXE.so` on Linux,
 `SXE.dll` on Windows, `sxe.h`), to use it from other programs and languages: see [Using SXE Core as a library](#using-sxe-core-as-a-library).
+From Python with `import sxe`: see [Using SXE Core from Python](#using-sxe-core-from-python).
 
 ### Fast
 About 700,000 steps per second on a Raspberry Pi 4: two years of 1-hour candles with
 intra-candle ticks run in 0.2 seconds.
 
 ### Tested
-25 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
+29 CTest tests on fixed real market data (BTCUSDT 2023-2024) and on hand-made candles,
 run by GitHub Actions on every push on Linux arm64 (GCC 14) and Windows x64 (MSVC), with
 the same golden references on both.
 
@@ -333,6 +334,75 @@ The tests run the golden references through the C interface too, from programs w
 (`file/Tests/Api`).
 
 
+## Using SXE Core from Python
+
+[`file/Python/sxe.py`](file/Python/sxe.py) runs the engine from Python through the C
+interface, with `ctypes`: one file, no build step and no dependencies, Python 3.8 or later.
+The build installs it next to the library, in `Target/Bin` (in the Windows package: `Bin`).
+
+```python
+import sys
+sys.path.insert(0, "Target/Bin")
+import sxe
+
+r = sxe.run("Target/Config/EngineConfig.ini",
+            settings={"SIMULATION": {"initial_capital": 10000}},
+            files=False)            # no archive, state file, order log, log files
+print(f"return {r.return_pct:+.2f}%, max drawdown {r.max_drawdown_pct:.2f}%, cycles {r.cycles}")
+```
+
+With callbacks and options:
+
+```python
+with sxe.Engine() as eng:
+    eng.load_config("Target/Config/EngineConfig.ini")
+    eng.set("EXCHANGE", "slippage", 0.0001)
+    eng.options(archive=False, progress_every=5000)
+    eng.on_cycle(lambda c: print(c.cycle, c.closed_by, f"{c.growth_pct:+.2f}%"))
+    eng.on_progress(lambda p: print(p.time, p.equity))
+    r = eng.run()
+```
+
+With pandas (not needed by `sxe.py`), `r.cycle_list` becomes a table with one row per cycle,
+as in `total_result.txt`, and times as `datetime64` in UTC:
+
+```python
+import pandas as pd
+
+r = sxe.run("Target/Config/EngineConfig.ini", files=False)
+df = pd.DataFrame(r.cycle_list)
+year = df.groupby(df.open_time.dt.year)
+print(pd.DataFrame({
+    "cycles": year.size(),
+    "return_pct": (year.capital_end.last() / year.capital_start.first() - 1) * 100,
+    "worst_drawdown_pct": year.drawdown_pct.min(),
+    "fees": year.fees.sum(),
+}).round(2))
+```
+
+```
+           cycles  return_pct  worst_drawdown_pct    fees
+open_time
+2023          114       29.17               -2.89  408.45
+2024          106       11.23               -3.40  423.97
+```
+
+`df[df.closed_by == "liquidation"]` gives the liquidations only.
+
+- `Result`, `Cycle` and `Progress` are dataclasses with the fields of `sxe.h`; times are
+  `datetime` in UTC.
+- Errors are exceptions: `sxe.ConfigError`, `sxe.SetupError`, `sxe.RunError`, ... with the
+  text of `sxe_engine_error()`. An exception raised in a callback stops the run and comes out
+  of `run()`.
+- Ctrl+C during `run()` closes the run like the `SXE` program and then raises
+  `KeyboardInterrupt`; `eng.stop()` works from any thread.
+- `run()` releases the GIL: several engines in different threads run in parallel.
+- The library is the one next to `sxe.py`; `sxe.load(path)` or the environment variable
+  `SXE_LIBRARY` choose another one.
+
+The tests run the golden references from Python too (`file/Tests/Python`).
+
+
 ## Configuration
 
 `Target/Config/EngineConfig.ini`, every key is commented in the file:
@@ -358,7 +428,7 @@ The tests run the golden references through the C interface too, from programs w
 
 ## Tests
 
-`./comp_All.sh test` runs 25 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
+`./comp_All.sh test` runs 29 tests on fixed real data (`file/Tests/Data`: BTCUSDT 1h and
 funding, 2023-2024) and on a few hand-made candles:
 
 | Test | Checks |
@@ -384,6 +454,8 @@ funding, 2023-2024) and on a few hand-made candles:
 | `multirun_golden_isolated` | the same with liquidations |
 | `api_golden_template`, `api_golden_isolated`, `api_golden_limit` | the same golden runs through the C interface (`libSXE.so` / `SXE.dll`) from a program written in C |
 | `api_checks` | C interface: callbacks, options without files, configuration without files, stop, every error code |
+| `python_golden_template`, `python_golden_isolated`, `python_golden_limit` | the same golden runs from Python (`sxe.py`) |
+| `python_checks` | `sxe.py`: callbacks, dataclasses, pandas table, `files=False`, exceptions, stop, Ctrl+C, 4 engines in parallel threads |
 | `benchmark` | steps per second (measurement only) |
 
 Golden tests compare every cycle with the references in `file/Tests/Golden`: any change to
@@ -401,6 +473,7 @@ SXE_UPDATE_GOLDEN=1 ctest --test-dir CMakeWork -R golden
 |---|---|
 | `file/` | all sources, one folder per component (see [file/README.md](file/README.md)) |
 | `file/Api` | C interface: `sxe.h` and `libSXE.so` / `SXE.dll` |
+| `file/Python` | `sxe.py`: SXE Core from Python |
 | `file/Engine` | the engine loop, strategy loader, cycle archive, state |
 | `file/Exchange` | exchange interface and simulated exchange |
 | `file/DataFeed` | data feed interface and CSV feed with intra-candle ticks |

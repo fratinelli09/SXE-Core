@@ -15,6 +15,10 @@ C interface of the engine, for other programs and languages.
 - `Src/sxe.cpp`: the C functions on top of `CEngine` and `CSettings`; only the `sxe_`
   functions are exported.
 
+### Python/ -> sxe.py
+`sxe.py`: SXE Core from Python, with `ctypes` over the C interface (installed next to
+the library).
+
 ### Engine/ -> libEngine.so
 The engine.
 - `CEngine`: single thread, every step data -> exchange -> `Run()` of the strategy.
