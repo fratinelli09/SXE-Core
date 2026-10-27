@@ -13,7 +13,7 @@
 #   cmake --install CMakeWork
 #==========================================================
 cmake_minimum_required(VERSION 3.16)
-project(SXE VERSION 1.4.0 LANGUAGES CXX)
+project(SXE VERSION 1.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,8 @@ endif()
 set(SXE_BIN_DIR      Bin)
 set(SXE_STRATEGY_DIR Bin/Strategies)
 set(SXE_CONFIG_DIR   Config)
+set(SXE_INCLUDE_DIR  Include)            # sxe.h
+set(SXE_CMAKE_DIR    cmake)              # SXEConfig.cmake, for find_package(SXE)
 
 # executable and libraries live in Target/Bin and find each other without LD_LIBRARY_PATH
 set(CMAKE_INSTALL_RPATH "$ORIGIN")

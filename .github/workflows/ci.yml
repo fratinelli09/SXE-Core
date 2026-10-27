@@ -5,8 +5,9 @@
 # the same references should hold on every platform.
 #
 # When a release is published, the Windows job also attaches a ready-to-use zip to it:
-# SXE.exe, SXE.dll + SXE.lib + sxe.h (C interface), the engine DLLs, the Template strategy,
-# the example configuration, the test data, sxe.py (Python) and the licences (SXE Core and inih).
+# SXE.exe, SXE.dll + SXE.lib + sxe.h (C interface), the CMake package (cmake/), the engine DLLs,
+# the Template strategy, the example configuration, the test data, sxe.py (Python) and the
+# licences (SXE Core and inih).
 
 name: CI
 
@@ -69,8 +70,7 @@ jobs:
         run: |
           $dist = "dist/SXE-Core"
           cmake --install CMakeWork --prefix $dist
-          New-Item -ItemType Directory -Force "$dist/Include", "$dist/Data" | Out-Null
-          Copy-Item file/Api/Include/sxe.h "$dist/Include/"
+          New-Item -ItemType Directory -Force "$dist/Data" | Out-Null
           Copy-Item file/Tests/Data/BTCUSDT_1h_2023_2024.csv, file/Tests/Data/BTCUSDT_funding_2023_2024.csv "$dist/Data/"
           Copy-Item Target/Config/*.ini "$dist/Config/"
           (Get-Content "$dist/Config/EngineConfig.ini") -replace '^data\s*=.*$', 'data   = ../Data' |

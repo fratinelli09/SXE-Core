@@ -1,5 +1,7 @@
 CMakeWork/
 Target/Bin/
+Target/Include/
+Target/cmake/
 Target/Log/
 Target/Backup/
 __pycache__/
