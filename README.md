@@ -1,18 +1,32 @@
 # SXE Core - Strategy eXecution Engine
 
 A C++17 engine that runs trading strategies as plug-in libraries, with a realistic simulator
-of USDT-margined perpetual futures.
+of USDT-margined perpetual futures. Run it as a program, or embed it from C++, C, Python or
+CMake, on Linux and Windows.
+
+![Equity and drawdown of a leveraged DCA bot, BTCUSDT 2023-2024](docs/case_study/equity.svg)
+
+**Case study: [What a backtest hides](docs/case_study.md).** A leveraged DCA bot closes 380
+cycles out of 380 in profit and gains +1003% in two years, yet in August 2024 the account is
+66.9% below its peak. On candle closes the same bot gives +805%, without costs +1475%: the
+details of the simulation decide the number.
+
+```python
+import sys; sys.path.insert(0, "Target/Bin")
+import sxe
+r = sxe.run("Target/Config/EngineConfig.ini", files=False)
+print(f"return {r.return_pct:+.2f}%, max drawdown {r.max_drawdown_pct:.2f}%")
+```
+
+Windows package ready to run in every [release](https://github.com/fratinelli09/SXE-Core/releases/latest).
+31 tests in CI on Linux arm64 and Windows x64. Version 1.6.0 ([CHANGELOG](CHANGELOG.md)) -
+[Italian version](README_IT.md)
 
 The strategy is compiled as a separate shared library (`.so` on Linux, `.dll` on Windows)
 and knows nothing about where its prices come from. The engine loads it at runtime, checks
 its interface, feeds it market data step by step and executes its orders on a simulated
 exchange that reproduces the rules of a real one: market and limit orders, taker and maker fees, slippage, isolated/cross
 margin, tiered maintenance margin, funding every 8 hours and liquidation.
-
-Case study: [What a backtest hides: a leveraged DCA bot under realistic simulation](docs/case_study.md)
-
-Version 1.6.0 - changes in [CHANGELOG.md](CHANGELOG.md)  
-Italian version: [README_IT.md](README_IT.md)
 
 
 ## Highlights

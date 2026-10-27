@@ -1,7 +1,26 @@
 # SXE Core - Strategy eXecution Engine
 
 Motore C++17 che esegue strategie di trading caricate come librerie esterne, con un
-simulatore realistico dei futures perpetui con margine in USDT.
+simulatore realistico dei futures perpetui con margine in USDT. Si usa come programma o
+incorporato da C++, C, Python o CMake, su Linux e Windows.
+
+![Equity e drawdown di un bot DCA con leva, BTCUSDT 2023-2024](docs/case_study/equity.svg)
+
+**Caso di studio (in inglese): [What a backtest hides](docs/case_study.md).** Un bot DCA con
+leva chiude in profitto 380 cicli su 380 e guadagna +1003% in due anni, ma ad agosto 2024 il
+conto è al 66,9% sotto il massimo. Sulle sole chiusure delle candele lo stesso bot dà +805%,
+senza costi +1475%: sono i dettagli della simulazione a decidere il numero.
+
+```python
+import sys; sys.path.insert(0, "Target/Bin")
+import sxe
+r = sxe.run("Target/Config/EngineConfig.ini", files=False)
+print(f"rendimento {r.return_pct:+.2f}%, drawdown massimo {r.max_drawdown_pct:.2f}%")
+```
+
+Pacchetto Windows pronto all'uso in ogni [release](https://github.com/fratinelli09/SXE-Core/releases/latest).
+31 test nella CI su Linux arm64 e Windows x64. Versione 1.6.0 (modifiche in
+[CHANGELOG](CHANGELOG.md), in inglese) - [English version](README.md)
 
 La strategia è compilata come libreria separata (`.so` su Linux, `.dll` su Windows) e non sa
 da dove arrivano i prezzi.
@@ -9,11 +28,6 @@ Il motore la carica all'avvio, ne controlla l'interfaccia, le passa i dati del m
 dopo passo ed esegue i suoi ordini su un exchange simulato che riproduce le regole di uno
 vero: ordini a mercato e limite, commissioni taker e maker, slippage, margine
 isolated/crossed, margine di mantenimento a scaglioni, funding ogni 8 ore e liquidazione.
-
-Caso di studio (in inglese): [What a backtest hides: a leveraged DCA bot under realistic simulation](docs/case_study.md)
-
-Versione 1.6.0 - modifiche in [CHANGELOG.md](CHANGELOG.md) (in inglese)  
-English version: [README.md](README.md)
 
 
 ## Punti di forza
